@@ -1,12 +1,8 @@
-# Stage 1: Build the application
-FROM eclipse-temurin:17 AS build
-WORKDIR /app
+FROM maven:3-eclipse-temurin-17 AS build
 COPY . .
-RUN ./gradlew bootJar --no-daemon
+RUN mvn clean package -DskipTests
 
-# Stage 2: Create a minimal runtime image
-FROM eclipse-temurin:17-jdk-alpine
-WORKDIR /app
-COPY --from=build /app/build/libs/*.jar app.jar
+FROM eclipse-temurin:17-alpine
+COPY --from=build /target/*.jar demo.jar
 EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java", "-jar", "demo.jar"]
