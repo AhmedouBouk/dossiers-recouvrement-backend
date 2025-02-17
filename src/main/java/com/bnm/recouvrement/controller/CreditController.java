@@ -1,6 +1,5 @@
 package com.bnm.recouvrement.controller;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
@@ -22,9 +21,11 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.bnm.recouvrement.dao.CompteRepository;
 import com.bnm.recouvrement.dao.CreditRepository;
+import com.bnm.recouvrement.dao.GarantieRepository;
 import com.bnm.recouvrement.dto.CreditDTO;
 import com.bnm.recouvrement.entity.Compte;
 import com.bnm.recouvrement.entity.Credit;
+import com.bnm.recouvrement.entity.Garantie;
 import com.bnm.recouvrement.service.CreditService;
 import com.bnm.recouvrement.utils.Constants;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,7 +40,8 @@ public class CreditController {
     private CreditService creditService;
      @Autowired
     private CompteRepository compteRepository;
-    
+    @Autowired
+    private GarantieRepository garantieRepository;
    
     @Autowired
     private CreditRepository creditRepository;
@@ -50,8 +52,10 @@ public class CreditController {
 public ResponseEntity<Credit> creerCredit(@RequestBody CreditDTO creditDTO) throws IOException {
     Compte compte = compteRepository.findById(creditDTO.getIdCompte())
         .orElseThrow(() -> new RuntimeException("Compte introuvable : " + creditDTO.getIdCompte()));
+    Garantie garantie = garantieRepository.findById(creditDTO.getIdGarantie())
+        .orElseThrow(() -> new RuntimeException("Garantie introuvable : " + creditDTO.getIdGarantie()));
 
-    Credit credit = creditService.toEntity(creditDTO, compte);
+    Credit credit = creditService.toEntity(creditDTO, compte,garantie);
     Credit nouveauCredit = creditService.creerCredit(credit);
 
     return ResponseEntity.ok(nouveauCredit);
@@ -88,10 +92,12 @@ public ResponseEntity<Credit> creerCredit(@RequestBody CreditDTO creditDTO) thro
                 CreditDTO creditDTO = objectMapper.readValue(creditDTOString, CreditDTO.class);
                 Compte compte = compteRepository.findById(creditDTO.getIdCompte())
                 .orElseThrow(() -> new RuntimeException("Compte introuvable : " + creditDTO.getIdCompte()));
+                Garantie garantie = garantieRepository.findById(creditDTO.getIdGarantie())
+                .orElseThrow(() -> new RuntimeException("Garantie introuvable : " + creditDTO.getIdGarantie()));
 
 
         // Mapper le DTO en entité Credit
-                 Credit creditMiseAJour = creditService.toEntity(creditDTO, compte);
+                 Credit creditMiseAJour = creditService.toEntity(creditDTO, compte, garantie);
 
         // Sauvegarder l'entité
                  Credit credit = creditService.mettreAJourCredit(id, creditMiseAJour);

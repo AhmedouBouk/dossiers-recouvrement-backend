@@ -12,8 +12,7 @@ public class CreditDTO {
     private String statut;
     private String refTransaction;
     private String idCompte; // Pour mapper l'id du compte
-    private String typeGarantie;
-    private Double valeurGarantie;
+    private Long idGarantie;
     private String fondDossier; // Pour mapper l'id de la garantie
 
     // Getters et Setters
@@ -87,19 +86,12 @@ public class CreditDTO {
         this.fondDossier = fondDossier;
     }
 
-    public String getTypeGarantie() {
-        return typeGarantie;
+    public Long getIdGarantie() {
+        return idGarantie;
     }
 
-    public void setTypeGarantie(String typeGarantie) {
-        this.typeGarantie = typeGarantie;
+    public void setIdGarantie(Long idGarantie) {
+        this.idGarantie = idGarantie;
     }
 
-    public Double getValeurGarantie() {
-        return valeurGarantie;
-    }
-
-    public void setValeurGarantie(Double valeurGarantie) {
-        this.valeurGarantie = valeurGarantie;
-    }
 }

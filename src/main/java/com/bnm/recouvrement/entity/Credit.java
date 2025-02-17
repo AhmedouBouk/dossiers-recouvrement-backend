@@ -4,11 +4,10 @@ import java.time.LocalDate;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -47,6 +46,19 @@ public class Credit {
         this.dossierRecouvrement = dossierRecouvrement;
     }
 
+    @OneToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "id_garantie", nullable = false)
+    private Garantie garantie;
+    
+    public Garantie getGarantie() {
+        return garantie;
+    }
+
+
+    public void setGarantie(Garantie garantie) {
+        this.garantie = garantie;
+    }
+
     @Column( name = "montant")
     private Double montant;
     @Column( name = "tauxInteret")
@@ -59,10 +71,7 @@ public class Credit {
     private String statut;
     
     private String refTransaction;
-    @Column( name = "typeGarantie")
-    private String typeGarantie;
-    @Column( name = "valeur")
-    private Double valeurGarantie;
+
 
     @Column( name = "fondDossier")
     private String fondDossier;
@@ -72,15 +81,13 @@ public class Credit {
 
 
     // Constructeur
-    public Credit(Compte compte, Double montant, Double tauxInteret, Integer duree, LocalDate dateDebut, String statut, String typeGarantie, Double valeurGarantie) {
+    public Credit(Compte compte, Garantie garantie, Double montant, Double tauxInteret, Integer duree, LocalDate dateDebut, String statut) {
         this.compte = compte;
         this.montant = montant;
         this.tauxInteret = tauxInteret;
         this.duree = duree;
         this.dateDebut = dateDebut;
         this.statut = statut;
-        this.typeGarantie = typeGarantie;
-        this.valeurGarantie = valeurGarantie;
     }
 
 
@@ -149,27 +156,6 @@ public class Credit {
     public void setFondDossier(String fondDossier) {
         this.fondDossier = fondDossier;
     }
-
-    public String getTypeGarantie() {
-        return typeGarantie;
-    }
-
-    public void setTypeGarantie(String typeGarantie) {
-        this.typeGarantie = typeGarantie;
-    }
-
-    public Double getValeurGarantie() {
-        return valeurGarantie;
-    }
-
-    public void setValeurGarantie(Double valeurGarantie) {
-        this.valeurGarantie = valeurGarantie;
-    }
-
-
-    
-
-   
-   
+ 
 }
 
