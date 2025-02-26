@@ -2,7 +2,6 @@ package com.bnm.recouvrement.service;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -12,13 +11,13 @@ import java.util.Optional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.bnm.recouvrement.dao.CompteRepository;
 import com.bnm.recouvrement.dao.CreditRepository;
 import com.bnm.recouvrement.dto.CreditDTO;
 import com.bnm.recouvrement.entity.Compte;
 import com.bnm.recouvrement.entity.Credit;
+import com.bnm.recouvrement.entity.Garantie;
 
 @Service
 public class CreditService {
@@ -55,10 +54,9 @@ public class CreditService {
         credit.setDateDebut(creditMiseAJour.getDateDebut());
         credit.setStatut(creditMiseAJour.getStatut());
         credit.setRefTransaction(creditMiseAJour.getRefTransaction());
-        credit.setTypeGarantie(creditMiseAJour.getTypeGarantie());      // Add this line
-        credit.setValeurGarantie(creditMiseAJour.getValeurGarantie());
         credit.setFondDossier(creditMiseAJour.getFondDossier());  // Add this line
         credit.setCompte(creditMiseAJour.getCompte());           // Add this line
+        credit.setGarantie(creditMiseAJour.getGarantie()); 
         return creditRepository.save(credit);
     }
 
@@ -88,7 +86,7 @@ public class CreditService {
 
     
     
-    public Credit toEntity(CreditDTO creditDTO, Compte compte) {
+    public Credit toEntity(CreditDTO creditDTO, Compte compte, Garantie garantie) {
         Credit credit = new Credit();
         credit.setMontant(creditDTO.getMontant());
         credit.setTauxInteret(creditDTO.getTauxInteret());
@@ -96,10 +94,9 @@ public class CreditService {
         credit.setDateDebut(creditDTO.getDateDebut());
         credit.setStatut(creditDTO.getStatut());
         credit.setRefTransaction(creditDTO.getRefTransaction());
-        credit.setTypeGarantie(creditDTO.getTypeGarantie());
-        credit.setValeurGarantie(creditDTO.getValeurGarantie());
         credit.setFondDossier(creditDTO.getFondDossier());  // Add this line
         credit.setCompte(compte);
+        credit.setGarantie(garantie);
         return credit;
     }
     public List<Credit> rechercherParNomCompte(String nomCompte) {
