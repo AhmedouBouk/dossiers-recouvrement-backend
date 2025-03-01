@@ -7,6 +7,7 @@ import com.bnm.recouvrement.entity.Client;
 import io.jsonwebtoken.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
@@ -56,7 +57,7 @@ public class ClientService {
             throw new Exception("Erreur lors de la lecture du fichier: " + e.getMessage());
         }
     }
-    
+    @PreAuthorize("hasAuthority('READ_CLIENT')")
     public List<Client> getAllClients() {
         return clientRepository.findAll();
     }
@@ -109,6 +110,8 @@ public class ClientService {
             return List.of(); // Return an empty list if no criteria are provided
         }
     }
+
+    @PreAuthorize("hasAuthority('READ_CLIENT')")
     public Optional<Client> getClientByNni(Integer nni) {
         return clientRepository.findByNni(nni);
     }

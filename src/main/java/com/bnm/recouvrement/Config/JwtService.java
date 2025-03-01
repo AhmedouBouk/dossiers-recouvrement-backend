@@ -5,9 +5,13 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
+
+import com.bnm.recouvrement.entity.Permission;
+import com.bnm.recouvrement.entity.User;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -29,7 +33,7 @@ public class JwtService {
         return claimsResolver.apply(claims);
     }
 
-    private Claims extractAllClaims(String token) {
+    Claims extractAllClaims(String token) {
         return Jwts.parserBuilder()
                 .setSigningKey(getSignInKey())
                 .build()
@@ -42,11 +46,18 @@ public class JwtService {
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateToken(UserDetails userDetails) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("role", userDetails.getAuthorities().iterator().next().getAuthority());
-        return generateToken(claims, userDetails);
-    }
+public String generateToken(UserDetails userDetails) {
+    User user = (User) userDetails; // Cast UserDetails to User
+    Map<String, Object> claims = new HashMap<>();
+    
+    claims.put("role", user.getRole().getName());  // Add role
+    claims.put("permissions", user.getRole().getPermissions().stream()
+                                  .map(Permission::getName)
+                                  .collect(Collectors.toList())); // Add permissions
+    
+    return generateToken(claims, userDetails);
+}
+
     
     
 

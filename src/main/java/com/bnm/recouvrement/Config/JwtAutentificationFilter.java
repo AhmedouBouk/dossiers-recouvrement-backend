@@ -9,7 +9,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -17,6 +16,8 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import lombok.RequiredArgsConstructor;
 
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -50,13 +51,21 @@ public class JwtAutentificationFilter extends OncePerRequestFilter {
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
                 if (jwtService.validateToken(jwt, userDetails)) {
+                    // Extract roles and permissions from JWT
+                    Map<String, Object> claims = jwtService.extractAllClaims(jwt);
+                    String role = (String) claims.get("role");
+                    List<String> permissions = (List<String>) claims.get("permissions");
+
+                    System.out.println("User Role: " + role);
+                    System.out.println("User Permissions: " + permissions);
+
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
-            } catch (UsernameNotFoundException e) {
-                System.out.println("User not found: " + e.getMessage());
+            } catch (Exception e) {
+                System.out.println("Authentication failed: " + e.getMessage());
             }
         }
 

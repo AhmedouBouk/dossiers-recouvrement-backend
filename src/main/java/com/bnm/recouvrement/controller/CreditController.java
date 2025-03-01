@@ -46,7 +46,8 @@ public class CreditController {
 
     // Créer un crédit avec des documents
     @PostMapping(Constants.create)
-@PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('CREATE_CREDIT')")
+
 public ResponseEntity<Credit> creerCredit(@RequestBody CreditDTO creditDTO) throws IOException {
     Compte compte = compteRepository.findById(creditDTO.getIdCompte())
         .orElseThrow(() -> new RuntimeException("Compte introuvable : " + creditDTO.getIdCompte()));
@@ -75,7 +76,7 @@ public ResponseEntity<Credit> creerCredit(@RequestBody CreditDTO creditDTO) thro
 
     // Mettre à jour un crédit
     @PutMapping(Constants.update+"/{id}")
-    @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('UPDATE_CREDIT')")
 
     public ResponseEntity<Credit> mettreAJourCredit(
             @PathVariable Long id,
@@ -101,7 +102,7 @@ public ResponseEntity<Credit> creerCredit(@RequestBody CreditDTO creditDTO) thro
 
     // Supprimer un crédit
     @DeleteMapping(Constants.delete+"/{id}")
-    @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('DELETE_CREDIT')")
 
     public ResponseEntity<String> supprimerCredit(@PathVariable Long id) {
         creditService.supprimerCredit(id);
@@ -109,7 +110,7 @@ public ResponseEntity<Credit> creerCredit(@RequestBody CreditDTO creditDTO) thro
     }
     
     @GetMapping(Constants.telecharger+"/{id}")
-    @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('DOWNLOAD_CREDIT')")
     public ResponseEntity<String> telechargerTousLesDocuments(@PathVariable Long id) {
         String dossierPath = creditService.telechargerTousLesDocuments(id);
         return ResponseEntity.ok("Documents sauvegardés dans le dossier : " + dossierPath);
@@ -128,7 +129,8 @@ public ResponseEntity<Credit> creerCredit(@RequestBody CreditDTO creditDTO) thro
 
    
    @PostMapping(value = "/import-credit")
-@PreAuthorize("hasAnyAuthority('DO', 'DC')")
+   @PreAuthorize("hasAuthority('IMPORT_CREDIT')")
+
 public ResponseEntity<Map<String, String>> importCredits(@RequestParam("file") MultipartFile file) {
     Map<String, String> response = new HashMap<>();
     try {

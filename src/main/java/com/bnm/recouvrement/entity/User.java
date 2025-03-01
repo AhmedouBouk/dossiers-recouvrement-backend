@@ -1,18 +1,15 @@
 package com.bnm.recouvrement.entity;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -23,31 +20,65 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name="app-user")
+@Table(name = "app_user") // Naming the table explicitly
+public class User implements UserDetails {
 
-public class User implements UserDetails{
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
+
     private String name;
     private String email;
     private String password;
 
-    @Enumerated(EnumType.STRING)
+    @ManyToOne
+    @JoinColumn(name = "role_id", nullable = false)
     private Role role;
+
+    // Methods from UserDetails interface
+
+    @Override
+    public Collection<? extends GrantedAuthority> getAuthorities() {
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        
+        if ("ADMIN".equalsIgnoreCase(this.role.getName())) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN")); // ✅ Correct role for Spring Security
+        } else {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role.getName()));
+            if (this.role.getPermissions() != null) {
+                this.role.getPermissions().forEach(permission -> {
+                    authorities.add(new SimpleGrantedAuthority(permission.getName()));
+                });
+            }
+        }
+        return authorities;
+    }
     
-    public String getEmail() {
-        return email;
+    
+    
+
+
+    @Override
+    public String getPassword() {
+        return password;
     }
 
-    public void setEmail(String email) {
+    @Override
+    public String getUsername() {
+        return email; // Using email as the username for authentication
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setUsername(String email) {
         this.email = email;
     }
+
     public void setName(String name) {
         this.name = name;
     }
-
-    
 
     public Role getRole() {
         return role;
@@ -57,34 +88,6 @@ public class User implements UserDetails{
         this.role = role;
     }
 
-
-    
-    
-
-
-    @Override
-    public Collection<? extends GrantedAuthority> getAuthorities() {
-        
-        
-        return List.of(new SimpleGrantedAuthority(this.role.name()));
-        
-        
-    }
-
-    @Override
-    public String getPassword() {
-        return password;
-    }
-
-    @Override
-public String getUsername() {
-    return email; // Use email as the username for Spring Security
-}
-public String getName() {
-    return name; // Use email as the username for Spring Security
-}
-
-
     public void setPassword(String password) {
         this.password = password;
     }
@@ -93,20 +96,19 @@ public String getName() {
     public boolean isAccountNonExpired() {
         return true;
     }
+
     @Override
     public boolean isAccountNonLocked() {
-       
-        return  true;
+        return true;
     }
+
     @Override
     public boolean isCredentialsNonExpired() {
         return true;
     }
+
     @Override
     public boolean isEnabled() {
         return true;
     }
-
-
-
 }

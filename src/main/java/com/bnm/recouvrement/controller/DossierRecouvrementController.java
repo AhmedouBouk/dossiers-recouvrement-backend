@@ -32,7 +32,7 @@ public class DossierRecouvrementController {
     private DossierRecouvrementService dossierRecouvrementService;
 
     @PostMapping("/detection-impayes")
-    @PreAuthorize("hasAnyAuthority('DGCR')")
+    @PreAuthorize("hasAuthority('DETECT_IMPAYES')")
 
     public ResponseEntity<String> detecterImpayes(@RequestParam("file") MultipartFile file) {
         try {
@@ -44,7 +44,7 @@ public class DossierRecouvrementController {
         }
     }
     @PostMapping("/upload/{dossierId}/ajouter-credit/{creditId}")
-    @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('ADD_CREDIT_TO_DOSSIER')")
     public ResponseEntity<DossierRecouvrement> ajouterCredit(
             @PathVariable Long dossierId, @PathVariable Long creditId) {
         try {
@@ -57,7 +57,7 @@ public class DossierRecouvrementController {
 
     // Modifier un dossier de recouvrement
     @PutMapping(Constants.update+"/{dossierId}")
-    @PreAuthorize("hasAnyAuthority('RECOUVREMENT')")
+    @PreAuthorize("hasAuthority('UPDATE_DOSSIER')")
 
     public ResponseEntity<DossierRecouvrement> modifierDossier(
             @PathVariable Long dossierId, @RequestBody DossierRecouvrement modifications) {
@@ -67,7 +67,8 @@ public class DossierRecouvrementController {
 
     // Modifier le statut d'un dossier
     @PatchMapping("/{dossierId}/modifier-statut")
-    @PreAuthorize("hasAnyAuthority('RECOUVREMENT')")
+    @PreAuthorize("hasAuthority('MODIFY_DOSSIER_STATUS')")
+
 
     public ResponseEntity<DossierRecouvrement> modifierStatut(
             @PathVariable Long dossierId, @RequestParam String nouveauStatut) {
@@ -77,7 +78,8 @@ public class DossierRecouvrementController {
 
     // Supprimer un dossier de recouvrement
     @DeleteMapping(Constants.delete+"/{dossierId}")
-    @PreAuthorize("hasAnyAuthority('RECOUVREMENT')")
+    @PreAuthorize("hasAuthority('DELETE_DOSSIER')")
+
 
     public ResponseEntity<String> supprimerDossier(@PathVariable Long dossierId) {
         dossierRecouvrementService.supprimerDossier(dossierId);
@@ -103,7 +105,8 @@ public class DossierRecouvrementController {
         return ResponseEntity.ok(dossiers);
     }
     @GetMapping(Constants.telecharger+"/{dossierId}")
-    @PreAuthorize("hasAnyAuthority('RECOUVREMENT')")
+    @PreAuthorize("hasAuthority('DOWNLOAD_DOSSIER')")
+
     public ResponseEntity<String> sauvegarderDossier(@PathVariable Long dossierId) {
         String cheminDossier = "C:\\Users\\DELL\\Desktop\\IRT11"; // Chemin absolu ou relatif
         new File(cheminDossier).mkdirs(); // Crée le répertoire s'il n'existe pas
