@@ -36,7 +36,7 @@ public class ClientController {
     }
 
     @PostMapping(value = "/import-client")
-    @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('IMPORT_CLIENT')")
     public ResponseEntity<String> importClients(@RequestParam("file") MultipartFile file) {
         try {
             String originalFilename = file.getOriginalFilename();
@@ -62,7 +62,7 @@ public class ClientController {
 
 
     @PutMapping("/update/{nni}")
-    @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('UPDATE_CLIENT')")
     public String mettreAJourClient(
             @PathVariable Integer nni,
             @RequestParam(required = false) String nom,
@@ -76,7 +76,7 @@ public class ClientController {
     }
 
     @DeleteMapping("/delete/{nni}")
-    // @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('DELETE_CLIENT')")
     public String supprimerClient(@PathVariable Integer nni) {
         clientService.supprimerClient(nni);
         return "Le client avec le NNI " + nni + " a été supprimé avec succès.";
@@ -98,7 +98,6 @@ public class ClientController {
     }
     @GetMapping("/{nni}")
     @PreAuthorize("isAuthenticated()")
-
     public ResponseEntity<ClientDTO> getClientByNni(@PathVariable Integer nni) {
         Optional<Client> client = clientService.getClientByNni(nni);
         if (client.isPresent()) {

@@ -26,7 +26,7 @@ public class CompteController {
     private CompteService compteService;
 
     @PostMapping("/import-comptes")
-    @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('IMPORT_COMPTE')")
     public ResponseEntity<?> importComptes(@RequestParam("file") MultipartFile file) {
         try {
             if (file.isEmpty()) {
@@ -71,7 +71,7 @@ public class CompteController {
     }
 
     @PutMapping("/update/{nomCompte}")
-    @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('UPDATE_COMPTE')")
     public ResponseEntity<String> mettreAJourCompte(
             @PathVariable String nomCompte,
             @RequestParam(required = false) Double solde,
@@ -85,7 +85,7 @@ public class CompteController {
     }
 
     @DeleteMapping("/delete/{nomCompte}")
-    @PreAuthorize("hasAnyAuthority('DO', 'DC')")
+    @PreAuthorize("hasAuthority('DELETE_COMPTE')")
     public ResponseEntity<String> supprimerCompte(@PathVariable String nomCompte) {
         try {
             compteService.supprimerCompte(nomCompte);
