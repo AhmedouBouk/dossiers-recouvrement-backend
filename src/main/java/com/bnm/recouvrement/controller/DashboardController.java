@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.bnm.recouvrement.dao.ClientRepository;
 import com.bnm.recouvrement.dao.CompteRepository;
-import com.bnm.recouvrement.dao.CreditRepository;
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 
 @RestController
@@ -27,8 +26,7 @@ public class DashboardController<DossierRepository> {
     @Autowired
     private ClientRepository clientRepository;
 
-    @Autowired
-    private CreditRepository creditRepository;
+    
 
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Object>> getDashboardStats() {
@@ -36,7 +34,6 @@ public class DashboardController<DossierRepository> {
         stats.put("totalDossiers", dossierRepository.count());
         stats.put("totalComptes", compteRepository.count());
         stats.put("totalClients", clientRepository.count());
-        stats.put("totalCredits", creditRepository.count());
         return ResponseEntity.ok(stats);
     }
 }

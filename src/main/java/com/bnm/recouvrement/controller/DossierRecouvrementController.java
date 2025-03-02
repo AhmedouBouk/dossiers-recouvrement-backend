@@ -1,134 +1,138 @@
 package com.bnm.recouvrement.controller;
 
 import java.io.File;
-
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.bnm.recouvrement.entity.DossierRecouvrement;
 import com.bnm.recouvrement.service.DossierRecouvrementService;
-import com.bnm.recouvrement.utils.Constants;
-
 
 @RestController
-@RequestMapping("/DossierRecouvrement")
+@RequestMapping("/dossiers")
+@CrossOrigin(origins = "http://localhost:4200")
 public class DossierRecouvrementController {
-      @Autowired
-    private DossierRecouvrementService dossierRecouvrementService;
 
-    @PostMapping("/detection-impayes")
-    @PreAuthorize("hasAuthority('DETECT_IMPAYES')")
+    @Autowired
+    private DossierRecouvrementService dossierService;
 
-    public ResponseEntity<String> detecterImpayes(@RequestParam("file") MultipartFile file) {
+    @GetMapping("/affichage")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<DossierRecouvrement>> getAllDossiers() {
         try {
-            dossierRecouvrementService.detecterImpayesEtCreerDossiers(file);
-            return ResponseEntity.ok("Fichier traité avec succès.");
+            List<DossierRecouvrement> dossiers = dossierService.getAllDossiers();
+            return ResponseEntity.ok(dossiers);
         } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(500).body("Erreur lors du traitement du fichier : " + e.getMessage());
-        }
-    }
-    @PostMapping("/upload/{dossierId}/ajouter-credit/{creditId}")
-    @PreAuthorize("hasAuthority('ADD_CREDIT_TO_DOSSIER')")
-    public ResponseEntity<DossierRecouvrement> ajouterCredit(
-            @PathVariable Long dossierId, @PathVariable Long creditId) {
-        try {
-            DossierRecouvrement dossier = dossierRecouvrementService.ajouterCredit(dossierId, creditId);
-            return ResponseEntity.ok(dossier);
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(null);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
 
-    // Modifier un dossier de recouvrement
-    @PutMapping(Constants.update+"/{dossierId}")
-    @PreAuthorize("hasAuthority('UPDATE_DOSSIER')")
-
-    public ResponseEntity<DossierRecouvrement> modifierDossier(
-            @PathVariable Long dossierId, @RequestBody DossierRecouvrement modifications) {
-        DossierRecouvrement dossier = dossierRecouvrementService.modifierDossier(dossierId, modifications);
-        return ResponseEntity.ok(dossier);
-    }
-
-    // Modifier le statut d'un dossier
-    @PatchMapping("/{dossierId}/modifier-statut")
-    @PreAuthorize("hasAuthority('MODIFY_DOSSIER_STATUS')")
-
-
-    public ResponseEntity<DossierRecouvrement> modifierStatut(
-            @PathVariable Long dossierId, @RequestParam String nouveauStatut) {
-        DossierRecouvrement dossier = dossierRecouvrementService.modifierStatut(dossierId, nouveauStatut);
-        return ResponseEntity.ok(dossier);
-    }
-
-    // Supprimer un dossier de recouvrement
-    @DeleteMapping(Constants.delete+"/{dossierId}")
-    @PreAuthorize("hasAuthority('DELETE_DOSSIER')")
-
-
-    public ResponseEntity<String> supprimerDossier(@PathVariable Long dossierId) {
-        dossierRecouvrementService.supprimerDossier(dossierId);
-        return ResponseEntity.ok().build();
-    }
-
-    // Lire un dossier par ID
-    @GetMapping(Constants.lire+"/{dossierId}")
-        @PreAuthorize("isAuthenticated()")
-
-    public ResponseEntity<DossierRecouvrement> lireDossier(@PathVariable Long dossierId) {
-        return dossierRecouvrementService.lireDossier(dossierId)
-                .map(ResponseEntity::ok)
+    @GetMapping("/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<DossierRecouvrement> getDossierById(@PathVariable Long id) {
+        Optional<DossierRecouvrement> dossier = dossierService.getDossierById(id);
+        return dossier.map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());
     }
 
-    // Afficher tous les dossiers
-    @GetMapping(Constants.Affichage)
+    @PutMapping("/update/{id}")
     @PreAuthorize("isAuthenticated()")
-
-    public ResponseEntity<List<DossierRecouvrement>> afficherTousLesDossiers() {
-        List<DossierRecouvrement> dossiers = dossierRecouvrementService.afficherTousLesDossiers();
-        return ResponseEntity.ok(dossiers);
-    }
-    @GetMapping(Constants.telecharger+"/{dossierId}")
-    @PreAuthorize("hasAuthority('DOWNLOAD_DOSSIER')")
-
-    public ResponseEntity<String> sauvegarderDossier(@PathVariable Long dossierId) {
-        String cheminDossier = "C:\\Users\\DELL\\Desktop\\IRT11"; // Chemin absolu ou relatif
-        new File(cheminDossier).mkdirs(); // Crée le répertoire s'il n'existe pas
-    
+    public ResponseEntity<DossierRecouvrement> updateDossier(
+            @PathVariable Long id,
+            @RequestBody DossierRecouvrement dossier) {
         try {
-            dossierRecouvrementService.sauvegarderDossierDansUnFichier(dossierId, cheminDossier);
-            return ResponseEntity.ok("Fichier ZIP créé avec succès dans le dossier : " + cheminDossier);
+            DossierRecouvrement updatedDossier = dossierService.updateDossier(id, dossier);
+            return ResponseEntity.ok(updatedDossier);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
         } catch (Exception e) {
-            return ResponseEntity.status(500).body("Erreur lors de la création du fichier ZIP : " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
-    // Rechercher un dossier par accountNumber
-    @GetMapping(Constants.recherche)
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<DossierRecouvrement> rechercherDossierParAccountNumber(
-            @RequestParam String accountNumber) {
-        return dossierRecouvrementService.rechercherParAccountNumberExact(accountNumber)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build()); // Retourne 404 si aucun dossier trouvé
-    }
-    
 
-    
-    
+    @DeleteMapping("/delete/{id}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<String> deleteDossier(@PathVariable Long id) {
+        try {
+            dossierService.deleteDossier(id);
+            return ResponseEntity.ok("Dossier supprimé avec succès");
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.notFound().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/recherche")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<DossierRecouvrement>> searchDossiers(
+            @RequestParam(required = false) Long dossierId,
+            @RequestParam(required = false) String numeroCompte,
+            @RequestParam(required = false) String nomClient) {
+        try {
+            List<DossierRecouvrement> dossiers = dossierService.searchDossiers(dossierId, numeroCompte, nomClient);
+            if (!dossiers.isEmpty()) {
+                return ResponseEntity.ok(dossiers);
+            }
+            return ResponseEntity.noContent().build();
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/create")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<DossierRecouvrement> createDossier(@RequestBody DossierRecouvrement dossier) {
+        try {
+            DossierRecouvrement newDossier = dossierService.createDossier(dossier);
+            return ResponseEntity.status(HttpStatus.CREATED).body(newDossier);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @PostMapping("/import")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<?> importDossiers(@RequestParam("file") MultipartFile file) {
+        try {
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Fichier vide", "status", "error"));
+            }
+
+            String fileName = file.getOriginalFilename();
+            if (fileName == null || !fileName.endsWith(".csv")) {
+                return ResponseEntity.badRequest()
+                    .body(Map.of("message", "Le fichier doit être au format CSV", "status", "error"));
+            }
+
+            String filePath = System.getProperty("java.io.tmpdir") + "/" + fileName;
+            File tempFile = new File(filePath);
+            file.transferTo(tempFile);
+
+            int importCount = dossierService.importDossiersFromFile(filePath);
+            tempFile.delete();
+
+            return ResponseEntity.ok(Map.of(
+                "message", "Import réussi",
+                "count", importCount,
+                "status", "success"
+            ));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of(
+                    "message", "Erreur d'importation: " + e.getMessage(),
+                    "status", "error"
+                ));
+        }
+    }
 }
