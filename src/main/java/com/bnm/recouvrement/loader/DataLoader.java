@@ -1,7 +1,5 @@
 package com.bnm.recouvrement.loader;
-
 import java.util.List;
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
@@ -16,7 +14,6 @@ public class DataLoader implements CommandLineRunner {
 
     @Autowired
     public DataLoader(PermissionRepository permissionRepository) {
-        
         this.permissionRepository = permissionRepository;
     }
 
@@ -36,8 +33,6 @@ public class DataLoader implements CommandLineRunner {
                 permissionRepository.save(new Permission(null, permName));
             }
         }
-
-        
-        
+    
     }
 }

@@ -62,7 +62,7 @@ public class SecurityConfig {
                 .requestMatchers("/DossierRecouvrement/delete/**").hasAuthority("DELETE_DOSSIER")
 
                 // DASHBOARD - Read-only access to dashboard statistics
-                .requestMatchers("/dashboard/**").hasAuthority("READ_DASHBOARD")
+                
 
                 // ADMIN - Only Admins can access these endpoints
                 .requestMatchers("/admin/**").hasRole("ADMIN")
@@ -70,6 +70,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/admin/roles").hasAuthority("READ_ROLE")
                 .requestMatchers(HttpMethod.PUT, "/admin/roles/**").hasAuthority("UPDATE_ROLE")
                 .requestMatchers(HttpMethod.DELETE, "/admin/roles/**").hasAuthority("DELETE_ROLE")
+                .requestMatchers("/dashboard/**").permitAll()
                 
 
                 // Require authentication for all other requests
