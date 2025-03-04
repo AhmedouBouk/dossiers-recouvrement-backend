@@ -2,6 +2,7 @@ package com.bnm.recouvrement.service;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -73,51 +74,53 @@ public class DossierRecouvrementService {
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             boolean firstLine = true;
-
+    
             while ((line = br.readLine()) != null) {
                 if (firstLine) {
                     firstLine = false;
-                    continue;
+                    continue; // Ignorer la première ligne (en-têtes)
                 }
-
-                String[] data = line.split(",");
+    
+                String[] data = line.split(";"); // Utiliser ';' comme séparateur
                 if (data.length < 14) {
                     throw new Exception("Format de ligne invalide: " + line);
                 }
-
+    
+                // Numéro de compte (ne pas convertir en double)
                 String numeroCompte = data[0].trim();
+    
+                // Vérifier si le numéro de compte existe
                 Optional<Compte> compteOpt = compteRepository.findById(numeroCompte);
                 if (compteOpt.isEmpty()) {
-                    throw new Exception("Compte non trouvé: " + numeroCompte);
+                    System.out.println("Compte non trouvé, ligne ignorée: " + numeroCompte);
+                    continue; // Ignorer cette ligne et passer à la suivante
                 }
-
-                DossierRecouvrement dossier = dossierRepository
-                    .findByCompteNomCompte(numeroCompte)
-                    .stream()
-                    .findFirst()
-                    .orElse(new DossierRecouvrement());
-
+    
+                // Récupérer ou créer un dossier
+                List<DossierRecouvrement> dossiers = dossierRepository.findByCompteNomCompte(numeroCompte);
+                DossierRecouvrement dossier = dossiers.isEmpty() ? new DossierRecouvrement() : dossiers.get(0);
+    
+                // Remplir les champs du dossier
                 dossier.setCompte(compteOpt.get());
-                dossier.setEngagementTotal(parseDoubleOrNull(data[3]));
-                dossier.setMontantPrincipal(parseDoubleOrNull(data[4]));
-                dossier.setInteretContractuel(parseDoubleOrNull(data[5]));
-                dossier.setInteretRetard(parseDoubleOrNull(data[6]));
-                dossier.setAgenceOuvertureCompte(data[8]);
-                dossier.setReferencesChecks(data[9]);
-                dossier.setReferencesCredits(data[10]);
-                dossier.setReferencesCautions(data[11]);
-                dossier.setReferencesLC(data[12]);
-                dossier.setProvision(parseDoubleOrNull(data[13]));
-                dossier.setGarantiesValeur(data[14]);
-
-                List<String> originesEngagement = new ArrayList<>();
-                if (data[7] != null && !data[7].trim().isEmpty()) {
-                    for (String origine : data[7].split(";")) {
-                        originesEngagement.add(origine.trim());
-                    }
-                }
-                dossier.setNaturesEngagement(originesEngagement);
-
+                dossier.setEngagementTotal(data[3] != null && !data[3].trim().isEmpty() ? parseDoubleOrNull(data[3]) : null);
+                dossier.setMontantPrincipal(data[4] != null && !data[4].trim().isEmpty() ? parseDoubleOrNull(data[4]) : null);
+                dossier.setInteretContractuel(data[5] != null && !data[5].trim().isEmpty() ? parseDoubleOrNull(data[5]) : null);
+                dossier.setInteretRetard(data[6] != null && !data[6].trim().isEmpty() ? parseDoubleOrNull(data[6]) : null);
+                dossier.setAgenceOuvertureCompte(data[8] != null && !data[8].trim().isEmpty() ? data[8].trim() : null);
+                dossier.setReferencesChecks(data[9] != null && !data[9].trim().isEmpty() ? data[9].trim() : null);
+                dossier.setReferencesCredits(data[10] != null && !data[10].trim().isEmpty() ? data[10].trim() : null);
+                dossier.setReferencesCautions(data[11] != null && !data[11].trim().isEmpty() ? data[11].trim() : null);
+                dossier.setReferencesLC(data[12] != null && !data[12].trim().isEmpty() ? data[12].trim() : null);
+                dossier.setProvision(data[13] != null && !data[13].trim().isEmpty() ? parseDoubleOrNull(data[13]) : null);
+                dossier.setGarantiesValeur(data[14] != null && !data[14].trim().isEmpty() ? data[14].trim() : null);
+    
+                // Gérer les natures d'engagement
+                dossier.setNaturesEngagement(data[7]);
+    
+                // Ajouter la date de création
+                dossier.setDateCreation(LocalDateTime.now());
+    
+                // Sauvegarder le dossier
                 dossierRepository.save(dossier);
                 importCount++;
             }
@@ -125,11 +128,11 @@ public class DossierRecouvrementService {
         return importCount;
     }
 
-    private Double parseDoubleOrNull(String value) {
-        try {
-            return value != null && !value.trim().isEmpty() ? Double.parseDouble(value.trim()) : null;
-        } catch (NumberFormatException e) {
-            return null;
-        }
+private Double parseDoubleOrNull(String value) {
+    try {
+        return value != null && !value.trim().isEmpty() ? Double.parseDouble(value.trim()) : null;
+    } catch (NumberFormatException e) {
+        return null;
     }
+}
 }

@@ -1,5 +1,6 @@
 package com.bnm.recouvrement.entity;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 import jakarta.persistence.CollectionTable;
@@ -13,6 +14,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -31,10 +33,9 @@ public class DossierRecouvrement {
     private Double interetContractuel;
     private Double interetRetard;
 
-    @ElementCollection
-    @CollectionTable(name = "dossier_natures_engagement")
+ 
     @Column(name = "nature")
-    private List<String> naturesEngagement; // credit, debit, cautions
+    private String naturesEngagement; // credit, debit, cautions
 
     private String agenceOuvertureCompte;
     private String referencesChecks; // Format: TT/CodeAgence/NumeroCheck
@@ -44,8 +45,7 @@ public class DossierRecouvrement {
     private Double provision;
     private Double interetsReserves;
 
-    @Enumerated(EnumType.STRING)
-    private DossierStatus status;
+    private String status;
 
     @Enumerated(EnumType.STRING)
     private EtatValidation etatValidation = EtatValidation.INITIALE;
@@ -61,13 +61,11 @@ public class DossierRecouvrement {
     @ManyToOne
     @JoinColumn(name = "compte_id")
     private Compte compte;
+    private LocalDateTime dateCreation;
 
-    public enum DossierStatus {
-        EN_COURS,
-        TERMINE,
-        SUSPENDU,
-        ANNULE
-    }
+ 
+
+   
 
     public enum EtatValidation {
         INITIALE,
