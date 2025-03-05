@@ -86,9 +86,12 @@ public class AdminController {
     @PostMapping("/add")
     public ResponseEntity<User> addUser(@RequestBody UserDto request) {
         try {
+            System.out.println("Received user request: " + request);
             User newUser = adminService.addUser(request);
             return ResponseEntity.ok(newUser);
         } catch (Exception e) {
+            System.err.println("Error adding user: " + e.getMessage());
+            e.printStackTrace();
             return ResponseEntity.badRequest().build();
         }
     }
