@@ -14,4 +14,6 @@ public interface DossierRecouvrementRepository extends JpaRepository<DossierReco
     // Basic CRUD operations are provided by JpaRepository
 
     List<DossierRecouvrement> findByCompteClientNomContainingIgnoreCase(String nomClient);
+
+    List<DossierRecouvrement> findByGarantiesFileIsNull();
 }

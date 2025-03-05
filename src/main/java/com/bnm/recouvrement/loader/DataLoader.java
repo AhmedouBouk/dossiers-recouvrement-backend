@@ -31,9 +31,9 @@ public class DataLoader implements CommandLineRunner {
             "CREATE_ROLE", "ASSIGN_ROLE", "READ_USERS", "MANAGE_USERS",
             "READ_CLIENT", "UPDATE_CLIENT", "DELETE_CLIENT",
             "IMPORT_CLIENT", "CREATE_COMPTE", "READ_COMPTE", "UPDATE_COMPTE", "DELETE_COMPTE",
-            "CREATE_CREDIT", "READ_CREDIT", "UPDATE_CREDIT", "DELETE_CREDIT", "DOWNLOAD_CREDIT",
-            "IMPORT_CREDIT",
-            "DETECT_IMPAYES", "ADD_CREDIT_TO_DOSSIER", "UPDATE_DOSSIER", "MODIFY_DOSSIER_STATUS", "DELETE_DOSSIER", "DOWNLOAD_DOSSIER",
+            "IMPORT_GRANTIE", "READ_GRANTIE", "UPDATE_GRANTIE", "DELETE_GRANTIE", "DOWNLOAD_GRANTIE",
+            
+            "DETECT_DOSSIERRECOUVREMENT", "ADD_DOSSIERRECOUVREMENT", "UPDATE_DOSSIERRECOUVREMENT", "MODIFY_DOSSIERRECOUVREMENT", "DELETE_DOSSIERRECOUVREMENT", "DOWNLOAD_DOSSIERRECOUVREMENT",
             "MANAGE_AGENCE_USERS", "READ_AGENCE_USERS"
         );
 
@@ -52,9 +52,8 @@ public class DataLoader implements CommandLineRunner {
             Set<Permission> agencePermissions = new HashSet<>();
             List<String> agencePermissionNames = List.of(
                 "READ_CLIENT",
-                "READ_COMPTE",
-                "READ_CREDIT", "DOWNLOAD_CREDIT",
-                "DETECT_IMPAYES", "DOWNLOAD_DOSSIER"
+                "READ_COMPTE"
+              
             );
             
             for (String permName : agencePermissionNames) {
