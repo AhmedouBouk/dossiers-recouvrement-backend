@@ -1,11 +1,13 @@
 package com.bnm.recouvrement.service;
 
 import com.bnm.recouvrement.Config.JwtService;
+import com.bnm.recouvrement.dao.AgenceRepository;
 import com.bnm.recouvrement.dao.RoleRepository;
 import com.bnm.recouvrement.dao.UserRepository;
 import com.bnm.recouvrement.dto.AuthRequest;
 import com.bnm.recouvrement.dto.AuthResponse;
 import com.bnm.recouvrement.dto.UserDto;
+import com.bnm.recouvrement.entity.Agence;
 import com.bnm.recouvrement.entity.Role;
 import com.bnm.recouvrement.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +23,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final AgenceRepository agenceRepository;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -34,6 +37,18 @@ public class AuthService {
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         user.setRole(role);
+        
+        // Si l'utilisateur a le rôle AGENCE, vérifier qu'une agence est associée
+        if ("AGENCE".equalsIgnoreCase(role.getName()) && request.getAgenceId() == null) {
+            throw new RuntimeException("Un utilisateur avec le rôle AGENCE doit être associé à une agence");
+        }
+        
+        // Si un ID d'agence est fourni, associer l'utilisateur à l'agence
+        if (request.getAgenceId() != null) {
+            Agence agence = agenceRepository.findById(request.getAgenceId())
+                    .orElseThrow(() -> new RuntimeException("Agence non trouvée avec l'ID: " + request.getAgenceId()));
+            user.setAgence(agence);
+        }
 
         userRepository.save(user);
         return new AuthResponse(jwtService.generateToken(user));

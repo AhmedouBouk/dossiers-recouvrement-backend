@@ -9,10 +9,8 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserDto {
-    private String name;
-    private String email;
-    private String password;
-    private String role;
-    private Long agenceId; // ID de l'agence associée
+public class AgenceDto {
+    private Long id;
+    private String code;
+    private String nom;
 }

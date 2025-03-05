@@ -5,14 +5,17 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UserDto {
+public class UserDetailsDto {
+    private Integer id;
     private String name;
     private String email;
-    private String password;
     private String role;
-    private Long agenceId; // ID de l'agence associée
+    private AgenceDto agence;
+    private List<String> permissions;
 }

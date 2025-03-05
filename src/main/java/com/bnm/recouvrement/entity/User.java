@@ -34,6 +34,10 @@ public class User implements UserDetails {
     @ManyToOne
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
+    
+    @ManyToOne
+    @JoinColumn(name = "agence_id")
+    private Agence agence;
 
     // Methods from UserDetails interface
 
@@ -42,7 +46,14 @@ public class User implements UserDetails {
         List<GrantedAuthority> authorities = new ArrayList<>();
         
         if ("ADMIN".equalsIgnoreCase(this.role.getName())) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN")); // ✅ Correct role for Spring Security
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN")); // Correct role for Spring Security
+        } else if ("AGENCE".equalsIgnoreCase(this.role.getName())) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_AGENCE"));
+            if (this.role.getPermissions() != null) {
+                this.role.getPermissions().forEach(permission -> {
+                    authorities.add(new SimpleGrantedAuthority(permission.getName()));
+                });
+            }
         } else {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role.getName()));
             if (this.role.getPermissions() != null) {
@@ -53,7 +64,6 @@ public class User implements UserDetails {
         }
         return authorities;
     }
-    
     
     
 
@@ -86,6 +96,14 @@ public class User implements UserDetails {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+    
+    public Agence getAgence() {
+        return agence;
+    }
+
+    public void setAgence(Agence agence) {
+        this.agence = agence;
     }
 
     public void setPassword(String password) {
