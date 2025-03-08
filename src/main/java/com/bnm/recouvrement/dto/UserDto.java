@@ -14,5 +14,6 @@ public class UserDto {
     private String email;
     private String password;
     private String role;
+    private String userType; // Nouveau champ pour le type d'utilisateur
     private Long agenceId; // ID de l'agence associée
 }
