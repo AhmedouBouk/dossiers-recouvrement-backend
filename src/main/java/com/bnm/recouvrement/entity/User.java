@@ -3,7 +3,6 @@ package com.bnm.recouvrement.entity;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -31,6 +30,9 @@ public class User implements UserDetails {
     private String email;
     private String password;
 
+    @Column(name = "user_type")
+    private String userType;  // Nouveau champ pour stocker le type d'utilisateur
+    
     @ManyToOne
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
@@ -45,21 +47,27 @@ public class User implements UserDetails {
     public Collection<? extends GrantedAuthority> getAuthorities() {
         List<GrantedAuthority> authorities = new ArrayList<>();
         
+        if (this.role == null) {
+            // Default authority if role is null
+            authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+            return authorities;
+        }
+        
         if ("ADMIN".equalsIgnoreCase(this.role.getName())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN")); // Correct role for Spring Security
         } else if ("AGENCE".equalsIgnoreCase(this.role.getName())) {
             authorities.add(new SimpleGrantedAuthority("ROLE_AGENCE"));
             if (this.role.getPermissions() != null) {
-                this.role.getPermissions().forEach(permission -> {
-                    authorities.add(new SimpleGrantedAuthority(permission.getName()));
-                });
+                this.role.getPermissions().forEach(permission -> 
+                    authorities.add(new SimpleGrantedAuthority(permission.getName()))
+                );
             }
         } else {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + this.role.getName()));
             if (this.role.getPermissions() != null) {
-                this.role.getPermissions().forEach(permission -> {
-                    authorities.add(new SimpleGrantedAuthority(permission.getName()));
-                });
+                this.role.getPermissions().forEach(permission -> 
+                    authorities.add(new SimpleGrantedAuthority(permission.getName()))
+                );
             }
         }
         return authorities;
@@ -108,6 +116,14 @@ public class User implements UserDetails {
 
     public void setPassword(String password) {
         this.password = password;
+    }
+    
+    public String getUserType() {
+        return userType;
+    }
+
+    public void setUserType(String userType) {
+        this.userType = userType;
     }
 
     @Override

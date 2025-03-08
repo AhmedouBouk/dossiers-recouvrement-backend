@@ -83,6 +83,16 @@ public class AdminService {
                     .orElseThrow(() -> new RuntimeException("Role not found"));
             user.setRole(role);
         }
+        if (request.getUserType() != null) {
+            user.setUserType(request.getUserType());
+            
+            // Si le type d'utilisateur est Agence, vérifier l'association à une agence
+            if ("Agence".equals(request.getUserType()) && request.getAgenceId() != null) {
+                Agence agence = agenceRepository.findById(request.getAgenceId())
+                        .orElseThrow(() -> new RuntimeException("Agence not found with ID: " + request.getAgenceId()));
+                user.setAgence(agence);
+            }
+        }
         return userRepository.save(user);
     }
 
@@ -117,6 +127,7 @@ public class AdminService {
         System.out.println("Password length before encoding: " + request.getPassword().length());
         System.out.println("Role: " + request.getRole());
         System.out.println("AgenceId: " + request.getAgenceId());
+        System.out.println("UserType: " + request.getUserType());
         
         User user = new User();
         user.setName(request.getName());
@@ -132,12 +143,23 @@ public class AdminService {
                 .orElseThrow(() -> new RuntimeException("Role not found: " + request.getRole()));
         user.setRole(role);
         
+        // Définir le type d'utilisateur
+        user.setUserType(request.getUserType());
+        
         // Si le rôle est AGENCE et qu'un ID d'agence est fourni, associer l'utilisateur à cette agence
         if ("AGENCE".equalsIgnoreCase(request.getRole()) && request.getAgenceId() != null) {
             Agence agence = agenceRepository.findById(request.getAgenceId())
                     .orElseThrow(() -> new RuntimeException("Agence not found with ID: " + request.getAgenceId()));
             user.setAgence(agence);
             System.out.println("User associated with agency: " + agence.getNom());
+        }
+        
+        // Si le type d'utilisateur est Agence, associer à l'agence correspondante
+        if ("Agence".equals(request.getUserType()) && request.getAgenceId() != null) {
+            Agence agence = agenceRepository.findById(request.getAgenceId())
+                    .orElseThrow(() -> new RuntimeException("Agence not found with ID: " + request.getAgenceId()));
+            user.setAgence(agence);
+            System.out.println("User of type Agence associated with agency: " + agence.getNom());
         }
         
         return userRepository.save(user);

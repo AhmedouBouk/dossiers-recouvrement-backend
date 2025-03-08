@@ -7,6 +7,8 @@ public class UpdateRequest {
     private String email;
     private String password;
     private String role;
+    private String userType;
+    private Long agenceId;
     
     public Long getId() {
         return id;
@@ -42,5 +44,19 @@ public class UpdateRequest {
         this.role = role;
     }
     
+    public String getUserType() {
+        return userType;
+    }
     
+    public void setUserType(String userType) {
+        this.userType = userType;
+    }
+    
+    public Long getAgenceId() {
+        return agenceId;
+    }
+    
+    public void setAgenceId(Long agenceId) {
+        this.agenceId = agenceId;
+    }
 }
