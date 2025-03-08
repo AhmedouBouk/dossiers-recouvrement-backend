@@ -19,7 +19,7 @@ public class AgenceController {
     private final AgenceService agenceService;
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('ADMIN', 'AGENCE')")
+    @PreAuthorize("hasAnyRole('ADMIN')")
     public ResponseEntity<List<AgenceDto>> getAllAgences() {
         return ResponseEntity.ok(agenceService.getAllAgences());
     }

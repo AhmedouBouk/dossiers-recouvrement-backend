@@ -2,6 +2,8 @@ package com.bnm.recouvrement.entity;
 
 import java.util.*;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -27,5 +29,6 @@ public class Agence {
     
     // Relation One-to-Many avec User
     @OneToMany(mappedBy = "agence", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonManagedReference // Cette annotation complète la @JsonBackReference dans User
     private List<User> users = new ArrayList<>();
 }

@@ -8,6 +8,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -39,6 +41,7 @@ public class User implements UserDetails {
     
     @ManyToOne
     @JoinColumn(name = "agence_id")
+    @JsonBackReference // Cette annotation empêche la sérialisation circulaire
     private Agence agence;
 
     // Methods from UserDetails interface
@@ -73,9 +76,6 @@ public class User implements UserDetails {
         return authorities;
     }
     
-    
-
-
     @Override
     public String getPassword() {
         return password;
