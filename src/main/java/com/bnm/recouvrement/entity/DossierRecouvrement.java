@@ -69,7 +69,10 @@ public class DossierRecouvrement {
 
     public enum EtatValidation {
         INITIALE,
+        COMPLET,
+
         VALIDE,
         NON_VALIDE
     }
+    
 }

@@ -135,4 +135,23 @@ private Double parseDoubleOrNull(String value) {
         return null;
     }
 }
+
+@Transactional
+public void updateChequeFile(Long dossierId, String chequeFileUrl) {
+    // Récupérer le dossier par son ID
+    DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+            .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
+
+    // Mettre à jour le champ chequeFile
+    dossier.setChequeFile(chequeFileUrl);
+
+    // Sauvegarder les modifications dans la base de données
+    dossierRepository.save(dossier);
+}
+
+// Sauvegarder un dossier
+public DossierRecouvrement saveDossier(DossierRecouvrement dossier) {
+    return dossierRepository.save(dossier);
+}
+
 }
