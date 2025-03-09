@@ -76,6 +76,7 @@ public class AgenceService {
     }
 
     private Agence mapToEntity(AgenceDto agenceDto) {
+        System.out.println(agenceDto);
         return Agence.builder()
                 .id(agenceDto.getId())
                 .code(agenceDto.getCode())
