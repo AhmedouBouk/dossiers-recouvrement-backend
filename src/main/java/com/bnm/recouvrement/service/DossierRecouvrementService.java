@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.bnm.recouvrement.dao.CompteRepository;
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 import com.bnm.recouvrement.entity.Compte;
+
 import com.bnm.recouvrement.entity.DossierRecouvrement;
 
 @Service
