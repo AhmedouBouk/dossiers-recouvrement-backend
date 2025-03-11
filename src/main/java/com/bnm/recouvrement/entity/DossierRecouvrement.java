@@ -1,11 +1,13 @@
 package com.bnm.recouvrement.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
-import jakarta.persistence.CollectionTable;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
-import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -14,15 +16,17 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.PrePersist;
+import jakarta.persistence.OneToMany;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
+@ToString(exclude = "commentaires") // Exclut commentaires de toString()
 public class DossierRecouvrement {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -62,6 +66,10 @@ public class DossierRecouvrement {
     @JoinColumn(name = "compte_id")
     private Compte compte;
     private LocalDateTime dateCreation;
+
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIgnore // Empêche la sérialisation JSON récursive
+    private List<Comment> commentaires = new ArrayList<>();
 
  
 
