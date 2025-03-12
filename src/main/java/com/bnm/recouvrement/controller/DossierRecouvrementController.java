@@ -14,7 +14,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.bnm.recouvrement.entity.DossierRecouvrement;
 import com.bnm.recouvrement.service.DossierRecouvrementService;
-
+import org.springframework.core.io.Resource;
 @RestController
 @RequestMapping("/dossiers")
 @CrossOrigin(origins = "http://localhost:4200")
@@ -134,5 +134,10 @@ public class DossierRecouvrementController {
                     "status", "error"
                 ));
         }
+    }
+    
+    @GetMapping("/{id}/generate-pdf")
+    public ResponseEntity<Resource> generateMiseEnDemeure(@PathVariable Long id) {
+        return dossierService.generateMiseEnDemeurePdf(id);
     }
 }

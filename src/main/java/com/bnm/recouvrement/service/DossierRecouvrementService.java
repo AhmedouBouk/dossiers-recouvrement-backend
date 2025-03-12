@@ -1,14 +1,32 @@
 package com.bnm.recouvrement.service;
 
 import java.io.BufferedReader;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.DocumentException;
+import com.itextpdf.text.Element;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.PageSize;
+import com.itextpdf.text.Paragraph;
+import com.itextpdf.text.Phrase;
+import com.itextpdf.text.pdf.PdfWriter;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
+import java.io.File;
+
+import java.io.IOException;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bnm.recouvrement.dao.CompteRepository;
@@ -135,4 +153,62 @@ private Double parseDoubleOrNull(String value) {
         return null;
     }
 }
+
+ public ResponseEntity<Resource> generateMiseEnDemeurePdf(Long dossierId) {
+        Optional<DossierRecouvrement> dossierOpt = dossierRepository.findById(dossierId);
+        if (dossierOpt.isEmpty()) {
+            throw new IllegalArgumentException("Dossier non trouvé !");
+        }
+
+        DossierRecouvrement dossier = dossierOpt.get();
+
+        // Créer un fichier temporaire pour stocker le PDF
+        File tempFile;
+        try {
+            tempFile = File.createTempFile("mise_en_demeure_", ".pdf");
+
+            // Créer un document PDF
+            Document document = new Document(PageSize.A4);
+            PdfWriter.getInstance(document, new FileOutputStream(tempFile));
+            document.open();
+
+            // Définir une police
+            Font titleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.BOLD);
+            Font textFont = new Font(Font.FontFamily.HELVETICA, 12);
+
+            // Ajouter le titre
+            Paragraph title = new Paragraph("Mise en Demeure", titleFont);
+            title.setAlignment(Element.ALIGN_CENTER);
+            document.add(title);
+            document.add(new Paragraph("\n"));
+
+            // Ajouter les détails du dossier
+            document.add(new Paragraph("Référence dossier : " + dossier.getId(), textFont));
+            document.add(new Paragraph("Client : " + dossier.getCompte().getNomCompte(), textFont));
+            document.add(new Paragraph("Montant dû : " + dossier.getMontantPrincipal() + " €", textFont));
+            document.add(new Paragraph("Date de création : " + dossier.getDateCreation(), textFont));
+            document.add(new Paragraph("\n"));
+
+            // Ajouter le texte de mise en demeure
+            document.add(new Paragraph("Madame, Monsieur,", textFont));
+            document.add(new Paragraph("Par la présente, nous vous mettons en demeure de payer la somme de "
+                    + dossier.getMontantPrincipal() + " € sous 15 jours.", textFont));
+            document.add(new Paragraph("À défaut, nous engagerons des poursuites judiciaires.", textFont));
+            document.add(new Paragraph("\nCordialement,", textFont));
+
+            document.close();
+
+            // Utiliser un FileSystemResource pour servir le fichier
+            FileSystemResource resource = new FileSystemResource(tempFile);
+
+            // Retourner le fichier en tant que réponse HTTP
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mise_en_demeure.pdf")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(resource);
+        } catch (DocumentException | IOException e) {
+            throw new RuntimeException("Erreur lors de la génération du PDF", e);
+        }
+    }
 }
+
