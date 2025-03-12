@@ -57,12 +57,13 @@ public class DossierRecouvrementController {
             Agence agence = user.getAgence();
 
             String code = (agence != null) ? agence.getCode(): null;
-    
+
             // Récupérer tous les dossiers
             List<DossierRecouvrement> dossiers = dossierService.getAllDossiers();
     
             // Filtrer les dossiers en fonction du type d'utilisateur
             List<DossierRecouvrement> filteredDossiers;
+
             if ("Recouvrement".equals(userType)) {
                 // Afficher uniquement les dossiers avec l'état COMPLET
                 filteredDossiers = dossiers.stream()
@@ -76,15 +77,14 @@ public class DossierRecouvrementController {
                                       dossier.getReferencesLC() != null)
                     .collect(Collectors.toList());
             } else if ("Agence".equals(userType)) {
-            System.out.println("Type d'utilisateur : " + userType);
-            System.out.println("Type d'utilisateur : " + agence);
+              
 
 
-                // Afficher uniquement les dossiers dont le champ referencesChecks n'est pas null et correspond à l'agence de l'utilisateur
                 filteredDossiers = dossiers.stream()
-                    .filter(dossier -> dossier.getReferencesChecks() != null &&
-                                        dossier.getReferencesChecks().startsWith("F/" + code + "/"))
-                    .collect(Collectors.toList());
+                .filter(dossier -> dossier.getReferencesChecks() != null && 
+                                   dossier.getReferencesChecks().matches(".*/" + code + "/.*"))
+                .collect(Collectors.toList());
+
             } else {
                 // Si l'utilisateur n'est ni RECOUVREMENT, ni D, ni AGENCE, retourner tous les dossiers
                 filteredDossiers = dossiers;
@@ -92,6 +92,7 @@ public class DossierRecouvrementController {
     
             return ResponseEntity.ok(filteredDossiers);
         } catch (Exception e) {
+            
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }
@@ -200,7 +201,6 @@ public class DossierRecouvrementController {
   
 
    
-    // Récupérer l'URL du fichier de chèque
  
     
 }
