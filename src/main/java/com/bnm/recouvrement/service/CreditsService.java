@@ -5,6 +5,8 @@ import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -18,6 +20,9 @@ public class CreditsService {
 
     @Autowired
     private DossierRecouvrementRepository dossierRepository;
+    
+    @Autowired
+    private HistoryService historyService;
 
     private final Path rootLocation = Paths.get("uploads/credits");
 
@@ -40,15 +45,47 @@ public class CreditsService {
         // Enregistrer l'URL du fichier dans la base de données
         String fileUrl = "http://localhost:8080/credits/" + fileName.replace(" ", "%20"); // Encoder les espaces
         dossier.setCreditsFile(fileUrl);
+        
+        DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
+        
+        // Enregistrer l'événement dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "upload", 
+            "credit", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Téléchargement du fichier crédit: " + file.getOriginalFilename()
+        );
     
-        return dossierRepository.save(dossier);
+        return updatedDossier;
     }
     
     public void deleteCreditsFile(Long dossierId) {
         DossierRecouvrement dossier = dossierRepository.findById(dossierId)
             .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
+        
+        // Enregistrer l'ancien nom du fichier pour l'historique
+        String oldFileUrl = dossier.getCreditsFile();
+        
         dossier.setCreditsFile(null);
         dossierRepository.save(dossier);
+        
+        // Enregistrer l'événement dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "delete", 
+            "credit", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Suppression du fichier crédit: " + oldFileUrl
+        );
     }
 
     // Récupérer l'URL du fichier de crédit

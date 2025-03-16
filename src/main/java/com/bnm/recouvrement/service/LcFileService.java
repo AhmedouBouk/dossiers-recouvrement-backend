@@ -3,6 +3,8 @@ package com.bnm.recouvrement.service;
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,6 +19,9 @@ public class LcFileService {
 
     @Autowired
     private DossierRecouvrementRepository dossierRepository;
+    
+    @Autowired
+    private HistoryService historyService;
 
     private final Path rootLocation = Paths.get("uploads/lc-files");
 
@@ -40,16 +45,47 @@ public class LcFileService {
         // Enregistrer l'URL du fichier dans la base de données
         String fileUrl = "http://localhost:8080/lc-files/" + fileName.replace(" ", "%20"); // Encoder les espaces
         dossier.setLcFile(fileUrl);
+        
+        DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
+        
+        // Enregistrer l'événement dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "upload", 
+            "lc-file", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Téléchargement du fichier lettre de crédit: " + file.getOriginalFilename()
+        );
 
-        return dossierRepository.save(dossier);
+        return updatedDossier;
     }
 
     // Supprimer un fichier LC
     public void deleteLcFile(Long dossierId) {
         DossierRecouvrement dossier = dossierRepository.findById(dossierId)
                 .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
+        
+        // Enregistrer l'ancien nom du fichier pour l'historique
+        String oldFileUrl = dossier.getLcFile();
+        
         dossier.setLcFile(null);
         dossierRepository.save(dossier);
+        
+        // Enregistrer l'événement dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,"delete", 
+            "lc-file", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Suppression du fichier lettre de crédit: " + oldFileUrl
+        );
     }
 
     // Récupérer l'URL du fichier LC

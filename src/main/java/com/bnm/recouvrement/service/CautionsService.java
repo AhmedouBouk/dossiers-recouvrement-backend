@@ -1,10 +1,11 @@
 package com.bnm.recouvrement.service;
 
-
 import org.springframework.stereotype.Service;
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,6 +18,9 @@ public class CautionsService {
 
     @Autowired
     private DossierRecouvrementRepository dossierRepository;
+    
+    @Autowired
+    private HistoryService historyService;
 
     private final Path rootLocation = Paths.get("uploads/cautions");
 
@@ -39,15 +43,47 @@ public class CautionsService {
         // Enregistrer l'URL du fichier dans la base de données
         String fileUrl = "http://localhost:8080/cautions/" + fileName.replace(" ", "%20"); // Encoder les espaces
         dossier.setCautionsFile(fileUrl);
+        
+        DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
+        
+        // Enregistrer l'événement dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "upload", 
+            "caution", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Téléchargement du fichier caution: " + file.getOriginalFilename()
+        );
 
-        return dossierRepository.save(dossier);
+        return updatedDossier;
     }
 
     public void deleteCautionsFile(Long dossierId) {
         DossierRecouvrement dossier = dossierRepository.findById(dossierId)
                 .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
+        
+        // Enregistrer l'ancien nom du fichier pour l'historique
+        String oldFileUrl = dossier.getCautionsFile();
+        
         dossier.setCautionsFile(null);
         dossierRepository.save(dossier);
+        
+        // Enregistrer l'événement dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "delete", 
+            "caution", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Suppression du fichier caution: " + oldFileUrl
+        );
     }
 
     public String getCautionsFile(Long dossierId) {
