@@ -23,7 +23,7 @@ import com.bnm.recouvrement.entity.DossierRecouvrement;
 import com.bnm.recouvrement.entity.User;
 import com.bnm.recouvrement.service.ChequeService;
 import com.bnm.recouvrement.service.DossierRecouvrementService;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -198,9 +198,4 @@ public class DossierRecouvrementController {
                 ));
         }
     }
-  
-
-   
- 
-    
 }
