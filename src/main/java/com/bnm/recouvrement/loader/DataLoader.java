@@ -28,18 +28,28 @@ public class DataLoader implements CommandLineRunner {
     public void run(String... args) throws Exception {
         // Créer les permissions par défaut
         List<String> defaultPermissions = List.of(
+            // Permissions existantes
             "CREATE_ROLE", "ASSIGN_ROLE", "READ_USERS", "MANAGE_USERS",
             "READ_CLIENT", "UPDATE_CLIENT", "DELETE_CLIENT",
             "IMPORT_CLIENT", "CREATE_COMPTE", "READ_COMPTE", "UPDATE_COMPTE", "DELETE_COMPTE",
             "IMPORT_GRANTIE", "READ_GRANTIE", "UPDATE_GRANTIE", "DELETE_GRANTIE", "DOWNLOAD_GRANTIE",
-            "IMPORT_CHEQUE", "READ_CHHEQUE", "UPDATE_CHEQUE", "DELETE_CHEQUE", "DOWNLOAD_CHEQUE",
-
-            
-            
-            "DETECT_DOSSIERRECOUVREMENT", "ADD_DOSSIERRECOUVREMENT", "UPDATE_DOSSIERRECOUVREMENT", "MODIFY_DOSSIERRECOUVREMENT", "DELETE_DOSSIERRECOUVREMENT", "DOWNLOAD_DOSSIERRECOUVREMENT",
-            "MANAGE_AGENCE_USERS", "READ_AGENCE_USERS"
+            "IMPORT_CHEQUE", "READ_CHEQUE", "UPDATE_CHEQUE", "DELETE_CHEQUE", "DOWNLOAD_CHEQUE",
+            "DETECT_DOSSIERRECOUVREMENT", "ADD_DOSSIERRECOUVREMENT", "UPDATE_DOSSIERRECOUVREMENT", 
+            "MODIFY_DOSSIERRECOUVREMENT", "DELETE_DOSSIERRECOUVREMENT", "DOWNLOAD_DOSSIERRECOUVREMENT",
+            "MANAGE_AGENCE_USERS", "READ_AGENCE_USERS",
+        
+            // Permissions pour les crédits
+            "CREATE_CREDIT", "READ_CREDIT", "UPDATE_CREDIT", "DELETE_CREDIT",
+            "DOWNLOAD_CREDIT_FILE", "UPLOAD_CREDIT_FILE",
+        
+            // Permissions pour les lettres de crédit (LC)
+            "CREATE_LC", "READ_LC", "UPDATE_LC", "DELETE_LC",
+            "DOWNLOAD_LC_FILE", "UPLOAD_LC_FILE",
+        
+            // Permissions pour les cautions
+            "CREATE_CAUTION", "READ_CAUTION", "UPDATE_CAUTION", "DELETE_CAUTION",
+            "DOWNLOAD_CAUTION_FILE", "UPLOAD_CAUTION_FILE"
         );
-
         for (String permName : defaultPermissions) {
             if (permissionRepository.findByName(permName).isEmpty()) {
                 permissionRepository.save(new Permission(null, permName));
