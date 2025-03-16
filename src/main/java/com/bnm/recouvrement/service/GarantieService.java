@@ -1,6 +1,8 @@
 package com.bnm.recouvrement.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,6 +21,9 @@ public class GarantieService {
 
     @Autowired
     private DossierRecouvrementRepository dossierRepository;
+    
+    @Autowired
+    private HistoryService historyService;
 
     private final Path rootLocation = Paths.get("uploads"); // Dossier de stockage des fichiers
 
@@ -45,7 +50,22 @@ public class GarantieService {
         // Enregistrer le chemin du fichier dans la base de données
         dossier.setGarantiesTitre(titre);
         dossier.setGarantiesFile(destinationFile.toString()); // Stocke le chemin du fichier
+        
+        DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
+        
+        // Enregistrer l'événement dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "upload", 
+            "garantie", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Téléchargement du fichier garantie '" + titre + "': " + file.getOriginalFilename()
+        );
 
-        return dossierRepository.save(dossier);
+        return updatedDossier;
     }
 }
