@@ -1,9 +1,11 @@
 package com.bnm.recouvrement.service;
 
 import com.bnm.recouvrement.dao.AgenceRepository;
+import com.bnm.recouvrement.repository.*;
 import com.bnm.recouvrement.dao.UserRepository;
 import com.bnm.recouvrement.entity.Agence;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
+import com.bnm.recouvrement.entity.Notification;
 import com.bnm.recouvrement.entity.User;
 import jakarta.mail.MessagingException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -26,6 +28,9 @@ public class NotificationService {
     @Autowired
     private AgenceRepository agenceRepository;
     
+    @Autowired
+    private NotificationRepository notificationRepository;
+    
     public void notifyGarantieUploadRequired(DossierRecouvrement dossier) {
         System.out.println("Tentative d'envoi de notification pour le dossier #" + dossier.getId());
         
@@ -45,11 +50,22 @@ public class NotificationService {
         String subject = "Action requise: Téléchargement de garantie pour le dossier #" + dossier.getId();
         String content = buildGarantieUploadEmail(dossier);
         
-        // Envoyer l'email à chaque utilisateur concerné
+        // Envoyer l'email à chaque utilisateur concerné et créer une notification
         for (User user : usersWithPermission) {
             try {
                 emailService.sendEmail(user.getEmail(), subject, content, true);
                 System.out.println("Email de notification envoyé à " + user.getEmail() + " pour le dossier #" + dossier.getId());
+                
+                // Créer et sauvegarder une notification
+                Notification notification = new Notification(
+                    user,
+                    dossier,
+                    "Téléchargement de garantie requis",
+                    "Une garantie doit être téléchargée pour le dossier #" + dossier.getId(),
+                    "GARANTIE"
+                );
+                notificationRepository.save(notification);
+                
             } catch (MessagingException e) {
                 System.err.println("Erreur lors de l'envoi d'email à " + user.getEmail() + ": " + e.getMessage());
                 e.printStackTrace();
@@ -107,6 +123,17 @@ public class NotificationService {
             try {
                 emailService.sendEmail(user.getEmail(), subject, content, true);
                 System.out.println("Email de notification chèque envoyé à " + user.getEmail() + " pour le dossier #" + dossier.getId());
+                
+                // Créer et sauvegarder une notification
+                Notification notification = new Notification(
+                    user,
+                    dossier,
+                    "Téléchargement de chèque requis",
+                    "Un chèque (Réf: " + dossier.getReferencesChecks() + ") doit être téléchargé pour le dossier #" + dossier.getId(),
+                    "CHEQUE"
+                );
+                notificationRepository.save(notification);
+                
             } catch (MessagingException e) {
                 System.err.println("Erreur lors de l'envoi d'email à " + user.getEmail() + ": " + e.getMessage());
                 e.printStackTrace();
@@ -154,11 +181,25 @@ public class NotificationService {
         String subject = "Action requise: Téléchargement de documents pour le dossier #" + dossier.getId();
         String content = buildDoDocumentsUploadEmail(dossier, requiredDocuments);
         
+        // Description courte pour la notification
+        String docsListStr = String.join(", ", requiredDocuments);
+        
         // Envoyer l'email à tous les utilisateurs DO
         for (User user : doUsers) {
             try {
                 emailService.sendEmail(user.getEmail(), subject, content, true);
                 System.out.println("Email de notification documents DO envoyé à " + user.getEmail() + " pour le dossier #" + dossier.getId());
+                
+                // Créer et sauvegarder une notification
+                Notification notification = new Notification(
+                    user,
+                    dossier,
+                    "Documents requis: " + docsListStr,
+                    "Les documents suivants doivent être téléchargés pour le dossier #" + dossier.getId() + ": " + docsListStr,
+                    "DOCUMENT_DO"
+                );
+                notificationRepository.save(notification);
+                
             } catch (MessagingException e) {
                 System.err.println("Erreur lors de l'envoi d'email à " + user.getEmail() + ": " + e.getMessage());
                 e.printStackTrace();
