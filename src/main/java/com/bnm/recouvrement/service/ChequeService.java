@@ -1,11 +1,10 @@
 package com.bnm.recouvrement.service;
 
 import org.springframework.stereotype.Service;
-
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
-
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.multipart.MultipartFile;
@@ -16,7 +15,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.UUID;
 
-
 @Service
 public class ChequeService {
 
@@ -26,6 +24,9 @@ public class ChequeService {
     @Autowired
     private HistoryService historyService;
 
+    @Value("${server.port:8080}")
+    private String serverPort;
+    
     private final Path rootLocation = Paths.get("uploads/cheques");
 
     public DossierRecouvrement uploadChequeFile(Long dossierId, MultipartFile file) throws IOException {
@@ -33,7 +34,6 @@ public class ChequeService {
                 .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
     
         // Créer le dossier de stockage s'il n'existe pas
-        Path rootLocation = Paths.get("uploads/cheques");
         if (!Files.exists(rootLocation)) {
             Files.createDirectories(rootLocation);
         }
@@ -45,16 +45,16 @@ public class ChequeService {
         // Sauvegarder le fichier sur le disque
         Files.copy(file.getInputStream(), destinationFile);
     
-        // Enregistrer l'URL du fichier dans la base de données
-        String fileUrl = "http://localhost:8080/cheques/" + fileName.replace(" ", "%20"); // Encoder les espaces
+        // Important: Stocker seulement le chemin relatif dans la base de données
+        String fileUrl = "/cheques/" + fileName;
         dossier.setChequeFile(fileUrl);
-        
+    
         DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
-        
+    
         // Enregistrer l'événement dans l'historique
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
-        
+    
         historyService.createEvent(
             username,
             "upload", 
@@ -66,13 +66,25 @@ public class ChequeService {
     
         return updatedDossier;
     }
-    
+
     public void deleteChequeFile(Long dossierId) {
         DossierRecouvrement dossier = dossierRepository.findById(dossierId)
             .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
         
         // Enregistrer l'ancien nom du fichier pour l'historique
         String oldFileUrl = dossier.getChequeFile();
+        
+        // Supprimer le fichier physique si nécessaire
+        if (oldFileUrl != null && !oldFileUrl.isEmpty()) {
+            try {
+                String fileName = oldFileUrl.substring(oldFileUrl.lastIndexOf('/') + 1);
+                Path filePath = rootLocation.resolve(fileName);
+                Files.deleteIfExists(filePath);
+            } catch (IOException e) {
+                // Logger l'erreur mais continuer le processus
+                System.err.println("Impossible de supprimer le fichier: " + e.getMessage());
+            }
+        }
         
         dossier.setChequeFile(null);
         dossierRepository.save(dossier);
@@ -94,9 +106,8 @@ public class ChequeService {
     public String getChequeFile(Long dossierId) {
         DossierRecouvrement dossier = dossierRepository.findById(dossierId).orElse(null);
         if (dossier != null && dossier.getChequeFile() != null) {
-            // Construire l'URL HTTP pour le fichier
-            String baseUrl = "http://localhost:8080";
-            return baseUrl + dossier.getChequeFile();
+            // Retourne l'URL relative, sera convertie en URL absolue par le frontend si nécessaire
+            return dossier.getChequeFile();
         }
         return null;
     }

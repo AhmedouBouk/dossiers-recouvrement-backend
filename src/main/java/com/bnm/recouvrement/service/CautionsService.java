@@ -41,8 +41,7 @@ public class CautionsService {
         Files.copy(file.getInputStream(), destinationFile);
 
         // Enregistrer l'URL du fichier dans la base de données
-        String fileUrl = "http://localhost:8080/cautions/" + fileName.replace(" ", "%20"); // Encoder les espaces
-        dossier.setCautionsFile(fileUrl);
+        String fileUrl = "/cautions/" + fileName.replace(" ", "%20"); // Chemin relatif        dossier.setCautionsFile(fileUrl);
         
         DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
         
@@ -86,13 +85,24 @@ public class CautionsService {
         );
     }
 
+  
     public String getCautionsFile(Long dossierId) {
-        DossierRecouvrement dossier = dossierRepository.findById(dossierId).orElse(null);
-        if (dossier != null && dossier.getCautionsFile() != null) {
-            // Construire l'URL HTTP pour le fichier
-            String baseUrl = "http://localhost:8080";
-            return baseUrl + dossier.getCautionsFile();
-        }
-        return null;
+        return dossierRepository.findById(dossierId)
+            .map(dossier -> {
+                if (dossier.getCautionsFile() != null && !dossier.getCautionsFile().isEmpty()) {
+                    String baseUrl = "http://localhost:8080/files"; // Remplace par ton vrai endpoint
+                    String filePath = dossier.getCautionsFile();
+
+                    // Éviter les doubles "/"
+                    if (filePath.startsWith("/")) {
+                        filePath = filePath.substring(1);
+                    }
+
+                    return baseUrl + "/" + filePath;
+                }
+                return null;
+            })
+            .orElse(null);
     }
+
 }

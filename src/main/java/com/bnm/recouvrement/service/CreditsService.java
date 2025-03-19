@@ -43,15 +43,15 @@ public class CreditsService {
         Files.copy(file.getInputStream(), destinationFile);
     
         // Enregistrer l'URL du fichier dans la base de données
-        String fileUrl = "http://localhost:8080/credits/" + fileName.replace(" ", "%20"); // Encoder les espaces
+        String fileUrl = "/credits/" + fileName.replace(" ", "%20"); // Chemin relatif
         dossier.setCreditsFile(fileUrl);
-        
+    
         DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
-        
+    
         // Enregistrer l'événement dans l'historique
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
         String username = auth.getName();
-        
+    
         historyService.createEvent(
             username,
             "upload", 
@@ -63,7 +63,6 @@ public class CreditsService {
     
         return updatedDossier;
     }
-    
     public void deleteCreditsFile(Long dossierId) {
         DossierRecouvrement dossier = dossierRepository.findById(dossierId)
             .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));

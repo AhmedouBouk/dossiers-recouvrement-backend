@@ -48,4 +48,6 @@ public class ChequeController {
             return ResponseEntity.status(404).body("Aucun fichier de chèque trouvé");
         }
     }
+   
+    
 }

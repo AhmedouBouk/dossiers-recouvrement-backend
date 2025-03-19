@@ -45,7 +45,8 @@ public class SecurityConfig {
                 .requestMatchers("/clients/create").hasAuthority("CREATE_CLIENT")
                 .requestMatchers("/clients/update/**").hasAuthority("UPDATE_CLIENT")
                 .requestMatchers("/clients/delete/**").hasAuthority("DELETE_CLIENT")
-    
+               
+
                 // COMPTES - Apply CRUD permissions for accounts
                 .requestMatchers("/comptes/**").hasAuthority("READ_COMPTE")
                 .requestMatchers("/comptes/create").hasAuthority("CREATE_COMPTE")
