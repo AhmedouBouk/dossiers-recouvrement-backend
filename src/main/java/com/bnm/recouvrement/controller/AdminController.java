@@ -116,4 +116,21 @@ public class AdminController {
             return ResponseEntity.notFound().build();
         }
     }
+    @PutMapping("/roles/{id}")
+    public ResponseEntity<?> updateRole(@PathVariable Long id, @RequestBody RoleRequest roleRequest) {
+        if (roleRequest.getRoleName() == null || roleRequest.getRoleName().trim().isEmpty()) {
+            return ResponseEntity.badRequest().body("Role name cannot be empty!");
+        }
+
+        if (roleRequest.getPermissions() == null || roleRequest.getPermissions().isEmpty()) {
+            return ResponseEntity.badRequest().body("Permissions cannot be empty!");
+        }
+
+        try {
+            Role updatedRole = adminService.updateRole(id, roleRequest);
+            return ResponseEntity.ok(updatedRole);
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
