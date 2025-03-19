@@ -1,6 +1,7 @@
 package com.bnm.recouvrement.service;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.time.LocalDateTime;
@@ -22,6 +23,8 @@ import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import java.io.File;
@@ -42,6 +45,12 @@ public class DossierRecouvrementService {
 
     @Autowired
     private CompteRepository compteRepository;
+    
+    @Autowired
+    private NotificationService notificationService;
+    
+    @Autowired
+    private HistoryService historyService;
 
     public List<DossierRecouvrement> getAllDossiers() {
         return dossierRepository.findAll();
@@ -53,7 +62,60 @@ public class DossierRecouvrementService {
 
     @Transactional
     public DossierRecouvrement createDossier(DossierRecouvrement dossier) {
-        return dossierRepository.save(dossier);
+        dossier = dossierRepository.save(dossier);
+        
+        // Enregistrer l'événement de création dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.logCreate(
+            username, 
+            "dossier", 
+            dossier.getId().toString(), 
+            "Dossier #" + dossier.getId()
+        );
+        
+        // Vérifier si le dossier nécessite un fichier de garantie
+        if (dossier.getGarantiesValeur() != null && !dossier.getGarantiesValeur().isEmpty() 
+                && dossier.getGarantiesFile() == null) {
+            System.out.println("Condition remplie pour envoyer une notification de garantie pour le dossier #" + dossier.getId());
+            // Envoyer notification pour le téléchargement de garantie
+            notificationService.notifyGarantieUploadRequired(dossier);
+        } else {
+            System.out.println("Condition NON remplie pour envoyer une notification de garantie pour le dossier #" + dossier.getId());
+            System.out.println("- Garanties Valeur: " + (dossier.getGarantiesValeur() != null ? dossier.getGarantiesValeur() : "null"));
+            System.out.println("- Garanties File: " + (dossier.getGarantiesFile() != null ? dossier.getGarantiesFile() : "null"));
+        }
+        
+        // Vérifier si le dossier a une référence de chèque
+        if (dossier.getReferencesChecks() != null && !dossier.getReferencesChecks().isEmpty() 
+                && dossier.getChequeFile() == null) {
+            System.out.println("Condition remplie pour envoyer une notification de chèque pour le dossier #" + dossier.getId());
+            // Envoyer notification pour le téléchargement de chèque
+            notificationService.notifyChequeUploadRequired(dossier);
+        } else {
+            System.out.println("Condition NON remplie pour envoyer une notification de chèque pour le dossier #" + dossier.getId());
+            System.out.println("- References Checks: " + (dossier.getReferencesChecks() != null ? dossier.getReferencesChecks() : "null"));
+            System.out.println("- Cheque File: " + (dossier.getChequeFile() != null ? dossier.getChequeFile() : "null"));
+        }
+        
+        // Vérifier si le dossier a des références de documents DO (caution, LC, crédit)
+        boolean hasDoRefs = (dossier.getReferencesCautions() != null && !dossier.getReferencesCautions().isEmpty()) ||
+                           (dossier.getReferencesLC() != null && !dossier.getReferencesLC().isEmpty()) ||
+                           (dossier.getReferencesCredits() != null && !dossier.getReferencesCredits().isEmpty());
+                           
+        if (hasDoRefs) {
+            System.out.println("Condition remplie pour envoyer une notification documents DO pour le dossier #" + dossier.getId());
+            // Envoyer notification pour le téléchargement des documents DO
+            notificationService.notifyDoDocumentsUploadRequired(dossier);
+        } else {
+            System.out.println("Condition NON remplie pour envoyer une notification documents DO pour le dossier #" + dossier.getId());
+            System.out.println("- References Cautions: " + (dossier.getReferencesCautions() != null ? dossier.getReferencesCautions() : "null"));
+            System.out.println("- References LC: " + (dossier.getReferencesLC() != null ? dossier.getReferencesLC() : "null"));
+            System.out.println("- References Credits: " + (dossier.getReferencesCredits() != null ? dossier.getReferencesCredits() : "null"));
+        }
+        
+        return dossier;
     }
 
     @Transactional
@@ -62,7 +124,20 @@ public class DossierRecouvrementService {
             throw new IllegalArgumentException("Dossier non trouvé avec l'ID: " + id);
         }
         dossier.setId(id);
-        return dossierRepository.save(dossier);
+        DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
+        
+        // Enregistrer l'événement de mise à jour dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.logUpdate(
+            username, 
+            "dossier", 
+            id.toString(), 
+            "Dossier #" + id
+        );
+        
+        return updatedDossier;
     }
 
     @Transactional
@@ -70,6 +145,18 @@ public class DossierRecouvrementService {
         if (!dossierRepository.existsById(id)) {
             throw new IllegalArgumentException("Dossier non trouvé avec l'ID: " + id);
         }
+        
+        // Enregistrer l'événement de suppression dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.logDelete(
+            username, 
+            "dossier", 
+            id.toString(), 
+            "Dossier #" + id
+        );
+        
         dossierRepository.deleteById(id);
     }
 
@@ -89,6 +176,10 @@ public class DossierRecouvrementService {
     @Transactional
     public int importDossiersFromFile(String filePath) throws Exception {
         int importCount = 0;
+        List<DossierRecouvrement> dossiersRequiringGaranties = new ArrayList<>();
+        List<DossierRecouvrement> dossiersRequiringCheques = new ArrayList<>();
+        List<DossierRecouvrement> dossiersRequiringDoDocuments = new ArrayList<>();
+        
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             boolean firstLine = true;
@@ -138,96 +229,132 @@ public class DossierRecouvrementService {
                 // Ajouter la date de création
                 dossier.setDateCreation(LocalDateTime.now());
     
-                // Sauvegarder le dossier
-                dossierRepository.save(dossier);
-                importCount++;
-            }
-        }
-        return importCount;
-    }
+                // Vérifier si le dossier nécessite un fichier de garantie
+               // Vérifier si le dossier nécessite un fichier de garantie
+               if (dossier.getGarantiesValeur() != null && !dossier.getGarantiesValeur().isEmpty() 
+               && dossier.getGarantiesFile() == null) {
+           System.out.println("Dossier #" + dossier.getId() + " nécessite une garantie - Préparation de notification");
+           dossiersRequiringGaranties.add(dossier);
+       }
+       
+       // Vérifier si le dossier a une référence de chèque
+       if (dossier.getReferencesChecks() != null && !dossier.getReferencesChecks().isEmpty() 
+               && dossier.getChequeFile() == null) {
+           System.out.println("Dossier #" + dossier.getId() + " nécessite un chèque - Préparation de notification");
+           dossiersRequiringCheques.add(dossier);
+       }
+       
+       // Vérifier si le dossier a des références de documents DO
+       boolean hasDoRefs = (dossier.getReferencesCautions() != null && !dossier.getReferencesCautions().isEmpty() 
+                           && dossier.getCautionsFile() == null) ||
+                          (dossier.getReferencesLC() != null && !dossier.getReferencesLC().isEmpty() 
+                           && dossier.getLcFile() == null) ||
+                          (dossier.getReferencesCredits() != null && !dossier.getReferencesCredits().isEmpty() 
+                           && dossier.getCreditsFile() == null);
+                          
+       if (hasDoRefs) {
+           System.out.println("Dossier #" + dossier.getId() + " nécessite des documents DO - Préparation de notification");
+           dossiersRequiringDoDocuments.add(dossier);
+       }
+       
+       // Sauvegarder le dossier
+       dossierRepository.save(dossier);
+       importCount++;
+   }
+   
+   // Enregistrer l'événement d'import dans l'historique
+   if (importCount > 0) {
+       // Récupérer l'utilisateur actuel
+       Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+       String username = auth.getName();
+       
+       // Créer un événement d'historique
+       historyService.logImport(
+           username, 
+           new File(filePath).getName(), 
+           "Import de " + importCount + " dossiers réussi"
+       );
+       
+       System.out.println("Historique d'import créé pour " + importCount + " dossiers par " + username);
+   }
+}
+
+// Envoyer des notifications pour tous les dossiers nécessitant des garanties
+System.out.println("Nombre de dossiers nécessitant des garanties: " + dossiersRequiringGaranties.size());
+for (DossierRecouvrement dossier : dossiersRequiringGaranties) {
+   System.out.println("Envoi de notification garantie pour le dossier #" + dossier.getId());
+   notificationService.notifyGarantieUploadRequired(dossier);
+}
+
+// Envoyer des notifications pour tous les dossiers nécessitant des chèques
+System.out.println("Nombre de dossiers nécessitant des chèques: " + dossiersRequiringCheques.size());
+for (DossierRecouvrement dossier : dossiersRequiringCheques) {
+   System.out.println("Envoi de notification chèque pour le dossier #" + dossier.getId());
+   notificationService.notifyChequeUploadRequired(dossier);
+}
+
+// Envoyer des notifications pour tous les dossiers nécessitant des documents DO
+System.out.println("Nombre de dossiers nécessitant des documents DO: " + dossiersRequiringDoDocuments.size());
+for (DossierRecouvrement dossier : dossiersRequiringDoDocuments) {
+   System.out.println("Envoi de notification documents DO pour le dossier #" + dossier.getId());
+   notificationService.notifyDoDocumentsUploadRequired(dossier);
+}
+
+return importCount;
+}
 
 private Double parseDoubleOrNull(String value) {
-    try {
-        return value != null && !value.trim().isEmpty() ? Double.parseDouble(value.trim()) : null;
-    } catch (NumberFormatException e) {
-        return null;
-    }
+try {
+   return value != null && !value.trim().isEmpty() ? Double.parseDouble(value.trim()) : null;
+} catch (NumberFormatException e) {
+   return null;
+}
 }
 
 @Transactional
 public void updateChequeFile(Long dossierId, String chequeFileUrl) {
-    // Récupérer le dossier par son ID
-    DossierRecouvrement dossier = dossierRepository.findById(dossierId)
-            .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
+// Récupérer le dossier par son ID
+DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+       .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
 
-    // Mettre à jour le champ chequeFile
-    dossier.setChequeFile(chequeFileUrl);
+// Mettre à jour le champ chequeFile
+dossier.setChequeFile(chequeFileUrl);
 
-    // Sauvegarder les modifications dans la base de données
-    dossierRepository.save(dossier);
+// Sauvegarder les modifications dans la base de données
+dossierRepository.save(dossier);
+
+// Enregistrer l'événement dans l'historique
+Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+String username = auth.getName();
+
+historyService.createEvent(
+   username,
+   "update", 
+   "cheque", 
+   dossierId.toString(), 
+   "Dossier #" + dossierId,
+   "Mise à jour URL du fichier chèque: " + chequeFileUrl
+);
 }
 
 // Sauvegarder un dossier
 public DossierRecouvrement saveDossier(DossierRecouvrement dossier) {
-    return dossierRepository.save(dossier);
+DossierRecouvrement savedDossier = dossierRepository.save(dossier);
+
+// Enregistrer l'événement dans l'historique
+Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+String username = auth.getName();
+
+historyService.createEvent(
+   username,
+   "save", 
+   "dossier", 
+   savedDossier.getId().toString(), 
+   "Dossier #" + savedDossier.getId(),
+   "Sauvegarde du dossier"
+);
+
+return savedDossier;
 }
 
-
- public ResponseEntity<Resource> generateMiseEnDemeurePdf(Long dossierId) {
-        Optional<DossierRecouvrement> dossierOpt = dossierRepository.findById(dossierId);
-        if (dossierOpt.isEmpty()) {
-            throw new IllegalArgumentException("Dossier non trouvé !");
-        }
-
-        DossierRecouvrement dossier = dossierOpt.get();
-
-        // Créer un fichier temporaire pour stocker le PDF
-        File tempFile;
-        try {
-            tempFile = File.createTempFile("mise_en_demeure_", ".pdf");
-
-            // Créer un document PDF
-            Document document = new Document(PageSize.A4);
-            PdfWriter.getInstance(document, new FileOutputStream(tempFile));
-            document.open();
-
-            // Définir une police
-            Font titleFont = new Font(Font.FontFamily.HELVETICA, 16, Font.BOLD);
-            Font textFont = new Font(Font.FontFamily.HELVETICA, 12);
-
-            // Ajouter le titre
-            Paragraph title = new Paragraph("Mise en Demeure", titleFont);
-            title.setAlignment(Element.ALIGN_CENTER);
-            document.add(title);
-            document.add(new Paragraph("\n"));
-
-            // Ajouter les détails du dossier
-            document.add(new Paragraph("Référence dossier : " + dossier.getId(), textFont));
-            document.add(new Paragraph("Client : " + dossier.getCompte().getNomCompte(), textFont));
-            document.add(new Paragraph("Montant dû : " + dossier.getMontantPrincipal() + " €", textFont));
-            document.add(new Paragraph("Date de création : " + dossier.getDateCreation(), textFont));
-            document.add(new Paragraph("\n"));
-
-            // Ajouter le texte de mise en demeure
-            document.add(new Paragraph("Madame, Monsieur,", textFont));
-            document.add(new Paragraph("Par la présente, nous vous mettons en demeure de payer la somme de "
-                    + dossier.getMontantPrincipal() + " € sous 15 jours.", textFont));
-            document.add(new Paragraph("À défaut, nous engagerons des poursuites judiciaires.", textFont));
-            document.add(new Paragraph("\nCordialement,", textFont));
-
-            document.close();
-
-            // Utiliser un FileSystemResource pour servir le fichier
-            FileSystemResource resource = new FileSystemResource(tempFile);
-
-            // Retourner le fichier en tant que réponse HTTP
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=mise_en_demeure.pdf")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .body(resource);
-        } catch (DocumentException | IOException e) {
-            throw new RuntimeException("Erreur lors de la génération du PDF", e);
-        }
-    }
 }
-

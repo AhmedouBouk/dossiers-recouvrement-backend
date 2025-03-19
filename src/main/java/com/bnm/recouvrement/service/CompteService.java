@@ -7,10 +7,13 @@ import com.bnm.recouvrement.dao.ClientRepository;
 import com.bnm.recouvrement.entity.Compte;
 import com.bnm.recouvrement.entity.Client;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.time.LocalDate;
 import java.util.Collections;
@@ -26,6 +29,9 @@ public class CompteService {
 
     @Autowired
     private ClientRepository clientRepository;
+    
+    @Autowired
+    private HistoryService historyService;
 
     @Transactional
     public int importComptesFromFile(String filePath) throws Exception {
@@ -63,7 +69,7 @@ public class CompteService {
                     LocalDate dateOuverture = LocalDate.parse(data[5]);
                     int categorie = Integer.parseInt(data[6]);
                     Compte compte = compteRepository.findById(nomCompte)
-                        .orElse(new Compte(client, nomCompte, libelecategorie,categorie, solde, etat, dateOuverture));
+                        .orElse(new Compte(client, nomCompte, libelecategorie, categorie, solde, etat, dateOuverture));
 
                     if (compteRepository.existsById(nomCompte)) {
                         compte.setSolde(solde);
@@ -77,6 +83,22 @@ public class CompteService {
                     System.err.println("Erreur ligne " + line + ": " + e.getMessage());
                     throw new Exception("Erreur à la ligne: " + line + " - " + e.getMessage());
                 }
+            }
+            
+            // Enregistrer l'événement d'import dans l'historique
+            if (importedCount > 0) {
+                // Récupérer l'utilisateur actuel
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                String username = auth.getName();
+                
+                // Créer un événement d'historique
+                historyService.logImport(
+                    username, 
+                    new File(filePath).getName(), 
+                    "Import de " + importedCount + " comptes réussi"
+                );
+                
+                System.out.println("Historique d'import créé pour " + importedCount + " comptes par " + username);
             }
         }
     
@@ -100,6 +122,17 @@ public class CompteService {
         }
 
         compteRepository.save(compte);
+        
+        // Enregistrer l'événement de mise à jour dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.logUpdate(
+            username, 
+            "compte", 
+            nomCompte, 
+            "Compte " + nomCompte
+        );
     }
 
     @Transactional
@@ -107,6 +140,18 @@ public class CompteService {
         if (!compteRepository.existsById(nomCompte)) {
             throw new IllegalArgumentException("Compte non trouvé: " + nomCompte);
         }
+        
+        // Enregistrer l'événement de suppression dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.logDelete(
+            username, 
+            "compte", 
+            nomCompte, 
+            "Compte " + nomCompte
+        );
+        
         compteRepository.deleteById(nomCompte);
     }
 
@@ -137,11 +182,11 @@ public class CompteService {
                 .collect(Collectors.toList());
     }
     
-    
     public Optional<Compte> getCompteByNomCompte(String nomCompte) {
         return compteRepository.findById(nomCompte);
     }
-     public List<CompteDTO> getAllComptesWithClients() {
+    
+    public List<CompteDTO> getAllComptesWithClients() {
         List<Compte> comptes = compteRepository.findAll();
         return comptes.stream()
             .map(this::convertToDTO)

@@ -1,6 +1,5 @@
 package com.bnm.recouvrement.service;
 
-
 import com.bnm.recouvrement.dao.ClientRepository;
 import com.bnm.recouvrement.entity.Client;
 
@@ -8,9 +7,12 @@ import io.jsonwebtoken.io.IOException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.time.LocalDate;
 import java.util.List;
@@ -21,8 +23,13 @@ public class ClientService {
 
     @Autowired
     private ClientRepository clientRepository;
+    
+    @Autowired
+    private HistoryService historyService;
 
     public void importClientsFromFile(String filePath) throws Exception {
+        int importedCount = 0;
+        
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             boolean firstLine = true;
@@ -49,18 +56,38 @@ public class ClientService {
                             secteurActivite, genre, salaire, adresse);
                     
                     clientRepository.save(client);
+                    importedCount++;
                 } catch (Exception e) {
                     throw new Exception("Erreur ligne " + line + ": " + e.getMessage());
                 }
             }
+            
+            // Enregistrer l'événement d'import dans l'historique
+            if (importedCount > 0) {
+                // Récupérer l'utilisateur actuel
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                String username = auth.getName();
+                
+                // Créer un événement d'historique
+                historyService.logImport(
+                    username, 
+                    new File(filePath).getName(), 
+                    "Import de " + importedCount + " clients réussi"
+                );
+                
+                System.out.println("Historique d'import créé pour " + importedCount + " clients par " + username);
+            }
+            
         } catch (IOException e) {
             throw new Exception("Erreur lors de la lecture du fichier: " + e.getMessage());
         }
     }
+    
     @PreAuthorize("hasAuthority('READ_CLIENT')")
     public List<Client> getAllClients() {
         return clientRepository.findAll();
     }
+    
     public void mettreAJourClient(Integer nni, String nom, String prenom, String adresse, Double salaire, String secteurActivite) {
         // Recherche du client par NNI
         Client client = clientRepository.findById(nni)
@@ -85,12 +112,41 @@ public class ClientService {
 
         // Sauvegarde du client mis à jour
         clientRepository.save(client);
+        
+        // Enregistrer l'événement de mise à jour dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.logUpdate(
+            username, 
+            "client", 
+            nni.toString(), 
+            "Client " + client.getNom() + " " + client.getPrenom()
+        );
     }
+    
     public void supprimerClient(Integer nni) {
         // Vérifie si le client existe
         if (!clientRepository.existsById(nni)) {
             throw new IllegalArgumentException("Client non trouvé avec le NNI : " + nni);
         }
+        
+        // Récupérer le client avant de le supprimer pour l'historique
+        Client client = clientRepository.findById(nni).orElse(null);
+        
+        // Enregistrer l'événement de suppression dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        if (client != null) {
+            historyService.logDelete(
+                username, 
+                "client", 
+                nni.toString(), 
+                "Client " + client.getNom() + " " + client.getPrenom()
+            );
+        }
+        
         // Supprime le client
         clientRepository.deleteById(nni);
     }

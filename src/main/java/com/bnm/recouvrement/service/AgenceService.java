@@ -4,6 +4,9 @@ import com.bnm.recouvrement.dao.AgenceRepository;
 import com.bnm.recouvrement.dto.AgenceDto;
 import com.bnm.recouvrement.entity.Agence;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +18,9 @@ import java.util.stream.Collectors;
 public class AgenceService {
 
     private final AgenceRepository agenceRepository;
+    
+    @Autowired
+    private HistoryService historyService;
 
     @Transactional(readOnly = true)
     public List<AgenceDto> getAllAgences() {
@@ -38,6 +44,18 @@ public class AgenceService {
         
         Agence agence = mapToEntity(agenceDto);
         Agence savedAgence = agenceRepository.save(agence);
+        
+        // Enregistrer l'événement de création dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.logCreate(
+            username, 
+            "agence", 
+            savedAgence.getId().toString(), 
+            "Agence " + savedAgence.getNom() + " (" + savedAgence.getCode() + ")"
+        );
+        
         return mapToDto(savedAgence);
     }
 
@@ -56,6 +74,18 @@ public class AgenceService {
         agence.setNom(agenceDto.getNom());
         
         Agence updatedAgence = agenceRepository.save(agence);
+        
+        // Enregistrer l'événement de mise à jour dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.logUpdate(
+            username, 
+            "agence", 
+            updatedAgence.getId().toString(), 
+            "Agence " + updatedAgence.getNom() + " (" + updatedAgence.getCode() + ")"
+        );
+        
         return mapToDto(updatedAgence);
     }
 
@@ -64,6 +94,23 @@ public class AgenceService {
         if (!agenceRepository.existsById(id)) {
             throw new RuntimeException("Agence non trouvée avec l'ID: " + id);
         }
+        
+        // Récupérer l'agence avant de la supprimer pour l'historique
+        Agence agence = agenceRepository.findById(id).orElse(null);
+        
+        // Enregistrer l'événement de suppression dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        if (agence != null) {
+            historyService.logDelete(
+                username, 
+                "agence", 
+                id.toString(), 
+                "Agence " + agence.getNom() + " (" + agence.getCode() + ")"
+            );
+        }
+        
         agenceRepository.deleteById(id);
     }
 
@@ -76,7 +123,6 @@ public class AgenceService {
     }
 
     private Agence mapToEntity(AgenceDto agenceDto) {
-        System.out.println(agenceDto);
         return Agence.builder()
                 .id(agenceDto.getId())
                 .code(agenceDto.getCode())
