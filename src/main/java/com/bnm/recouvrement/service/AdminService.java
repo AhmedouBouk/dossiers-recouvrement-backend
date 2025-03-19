@@ -164,4 +164,27 @@ public class AdminService {
         
         return userRepository.save(user);
     }
+    // Update an existing role
+public Role updateRole(Long roleId, RoleRequest request) {
+    Role role = roleRepository.findById(roleId)
+            .orElseThrow(() -> new RuntimeException("Role not found with ID: " + roleId));
+    
+    // Check if another role with the same name exists (excluding the current role)
+    roleRepository.findByName(request.getRoleName())
+            .ifPresent(existingRole -> {
+                if (!existingRole.getId().equals(roleId)) {
+                    throw new RuntimeException("Another role with name '" + request.getRoleName() + "' already exists");
+                }
+            });
+    
+    Set<Permission> permissions = request.getPermissions().stream()
+            .map(permissionName -> permissionRepository.findByName(permissionName)
+                    .orElseThrow(() -> new RuntimeException("Permission not found: " + permissionName)))
+            .collect(Collectors.toSet());
+    
+    role.setName(request.getRoleName());
+    role.setPermissions(permissions);
+    
+    return roleRepository.save(role);
+}
 }
