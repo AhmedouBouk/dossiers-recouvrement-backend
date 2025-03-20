@@ -24,42 +24,45 @@ public class CautionsService {
 
     private final Path rootLocation = Paths.get("uploads/cautions");
 
-    public DossierRecouvrement uploadCautionsFile(Long dossierId, MultipartFile file) throws IOException {
-        DossierRecouvrement dossier = dossierRepository.findById(dossierId)
-                .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
+    // Dans CautionsService.java, méthode uploadCautionsFile
 
-        // Créer le dossier de stockage s'il n'existe pas
-        if (!Files.exists(rootLocation)) {
-            Files.createDirectories(rootLocation);
-        }
+public DossierRecouvrement uploadCautionsFile(Long dossierId, MultipartFile file) throws IOException {
+    DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+            .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
 
-        // Générer un nom de fichier unique
-        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-        Path destinationFile = rootLocation.resolve(Paths.get(fileName)).normalize().toAbsolutePath();
-
-        // Sauvegarder le fichier sur le disque
-        Files.copy(file.getInputStream(), destinationFile);
-
-        // Enregistrer l'URL du fichier dans la base de données
-        String fileUrl = "/cautions/" + fileName.replace(" ", "%20"); // Chemin relatif        dossier.setCautionsFile(fileUrl);
-        
-        DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
-        
-        // Enregistrer l'événement dans l'historique
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-        
-        historyService.createEvent(
-            username,
-            "upload", 
-            "caution", 
-            dossierId.toString(), 
-            "Dossier #" + dossierId,
-            "Téléchargement du fichier caution: " + file.getOriginalFilename()
-        );
-
-        return updatedDossier;
+    // Créer le dossier de stockage s'il n'existe pas
+    if (!Files.exists(rootLocation)) {
+        Files.createDirectories(rootLocation);
     }
+
+    // Générer un nom de fichier unique
+    String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+    Path destinationFile = rootLocation.resolve(Paths.get(fileName)).normalize().toAbsolutePath();
+
+    // Sauvegarder le fichier sur le disque
+    Files.copy(file.getInputStream(), destinationFile);
+
+    // Enregistrer l'URL du fichier dans la base de données
+    String fileUrl = "/cautions/" + fileName.replace(" ", "%20"); // Chemin relatif
+    dossier.setCautionsFile(fileUrl); // Vérifiez que cette ligne est correcte
+    
+    DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
+    
+    // Enregistrer l'événement dans l'historique
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    String username = auth.getName();
+    
+    historyService.createEvent(
+        username,
+        "upload", 
+        "caution", 
+        dossierId.toString(), 
+        "Dossier #" + dossierId,
+        "Téléchargement du fichier caution: " + file.getOriginalFilename()
+    );
+
+    return updatedDossier;
+}
 
     public void deleteCautionsFile(Long dossierId) {
         DossierRecouvrement dossier = dossierRepository.findById(dossierId)
