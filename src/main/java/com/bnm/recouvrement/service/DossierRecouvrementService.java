@@ -36,6 +36,7 @@ import com.bnm.recouvrement.dao.CompteRepository;
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 import com.bnm.recouvrement.entity.Compte;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
+import com.bnm.recouvrement.repository.NotificationRepository;
 
 @Service
 public class DossierRecouvrementService {
@@ -51,7 +52,9 @@ public class DossierRecouvrementService {
     
     @Autowired
     private HistoryService historyService;
+    @Autowired
 
+     private NotificationRepository notificationRepository;
     public List<DossierRecouvrement> getAllDossiers() {
         return dossierRepository.findAll();
     }
@@ -156,6 +159,9 @@ public class DossierRecouvrementService {
             id.toString(), 
             "Dossier #" + id
         );
+        // Supprimer les notifications liées au dossier
+notificationRepository.deleteByDossierId(id);
+
         
         dossierRepository.deleteById(id);
     }

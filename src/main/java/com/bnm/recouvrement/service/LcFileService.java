@@ -43,7 +43,8 @@ public class LcFileService {
         Files.copy(file.getInputStream(), destinationFile);
 
         // Enregistrer l'URL du fichier dans la base de données
-        String fileUrl = "http://localhost:8080/lc-files/" + fileName.replace(" ", "%20"); // Encoder les espaces
+        // Dans LcFileService.java, méthode uploadLcFile
+        String fileUrl = "/lc-files/" + fileName.replace(" ", "%20"); // Chemin relatif
         dossier.setLcFile(fileUrl);
         
         DossierRecouvrement updatedDossier = dossierRepository.save(dossier);

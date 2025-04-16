@@ -21,10 +21,16 @@ public class WebConfig implements WebMvcConfigurer {
         registry.addResourceHandler("/garanties/**")
                 .addResourceLocations("file:./" + uploadDir + "/garanties/");
 
-  registry.addResourceHandler("/credits/**")
+        // Servir les fichiers de crédit
+        registry.addResourceHandler("/credits/**")
                 .addResourceLocations("file:./" + uploadDir + "/credits/");
-        // Servir d'autres fichiers
+                
+        // Servir les fichiers LC
+        registry.addResourceHandler("/lc-files/**")
+                .addResourceLocations("file:./" + uploadDir + "/lc-files/");
+        
+        // Servir les fichiers de caution
         registry.addResourceHandler("/cautions/**")
-        .addResourceLocations("file:./" + uploadDir + "/cautions/");
+                .addResourceLocations("file:./" + uploadDir + "/cautions/");
     }
 }
