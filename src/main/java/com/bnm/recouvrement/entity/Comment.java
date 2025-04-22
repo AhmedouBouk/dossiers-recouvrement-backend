@@ -32,6 +32,10 @@ public class Comment {
     @JoinColumn(name = "dossier_id", nullable = false)
     private DossierRecouvrement dossier;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
     public Comment() {
         this.createdAt = LocalDateTime.now();
     }
@@ -66,5 +70,13 @@ public class Comment {
 
     public void setDossier(DossierRecouvrement dossier) {
         this.dossier = dossier;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
     }
 }
