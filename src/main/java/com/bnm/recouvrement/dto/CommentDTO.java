@@ -8,6 +8,7 @@ public class CommentDTO {
     private String createdAt; 
     private Long dossierId;
     private UserInfo user;
+    private String reminderDateTime;
 
     // Sous-DTO pour exposer l'id et le nom d'utilisateur
     public static class UserInfo {
@@ -27,6 +28,11 @@ public class CommentDTO {
         this.dossierId = comment.getDossier().getId();
         if (comment.getUser() != null) {
             this.user = new UserInfo(comment.getUser().getId(), comment.getUser().getName());
+        }
+        if (comment.getReminderDateTime() != null) {
+            this.reminderDateTime = comment.getReminderDateTime().toString();
+        } else {
+            this.reminderDateTime = null;
         }
     }
 
@@ -67,5 +73,13 @@ public class CommentDTO {
 
     public void setDossierId(Long dossierId) {
         this.dossierId = dossierId;
+    }
+
+    public String getReminderDateTime() {
+        return reminderDateTime;
+    }
+
+    public void setReminderDateTime(String reminderDateTime) {
+        this.reminderDateTime = reminderDateTime;
     }
 }
