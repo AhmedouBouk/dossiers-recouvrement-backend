@@ -36,6 +36,10 @@ public class Comment {
     @JoinColumn(name = "user_id")
     private User user;
 
+    @Column(name = "reminder_date_time")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime reminderDateTime;
+
     public Comment() {
         this.createdAt = LocalDateTime.now();
     }
@@ -78,5 +82,13 @@ public class Comment {
 
     public void setUser(User user) {
         this.user = user;
+    }
+
+    public LocalDateTime getReminderDateTime() {
+        return reminderDateTime;
+    }
+
+    public void setReminderDateTime(LocalDateTime reminderDateTime) {
+        this.reminderDateTime = reminderDateTime;
     }
 }

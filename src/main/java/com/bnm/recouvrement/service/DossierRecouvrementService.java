@@ -363,4 +363,41 @@ historyService.createEvent(
 return savedDossier;
 }
 
+/**
+ * Met à jour le statut d'un dossier et enregistre l'événement dans l'historique
+ * @param dossierId ID du dossier à mettre à jour
+ * @param newStatus Nouveau statut du dossier
+ * @return Le dossier mis à jour
+ */
+@Transactional
+public DossierRecouvrement updateDossierStatus(Long dossierId, String newStatus) {
+    // Récupérer le dossier par son ID
+    DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+            .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
+    
+    // Sauvegarder l'ancien statut pour l'historique
+    String oldStatus = dossier.getStatus();
+    
+    // Mettre à jour le statut
+    dossier.setStatus(newStatus);
+    
+    // Sauvegarder les modifications
+    DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
+    
+    // Enregistrer l'événement dans l'historique
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    String username = auth.getName();
+    
+    historyService.createEvent(
+        username,
+        "update", 
+        "status", 
+        dossierId.toString(), 
+        "Dossier #" + dossierId,
+        "Mise à jour du statut: " + (oldStatus != null ? oldStatus : "Non défini") + " → " + newStatus
+    );
+    
+    return updatedDossier;
+}
+
 }
