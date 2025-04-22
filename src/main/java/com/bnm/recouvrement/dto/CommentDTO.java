@@ -7,6 +7,17 @@ public class CommentDTO {
     private String content;
     private String createdAt; 
     private Long dossierId;
+    private UserInfo user;
+
+    // Sous-DTO pour exposer l'id et le nom d'utilisateur
+    public static class UserInfo {
+        public Integer id;
+        public String name;
+        public UserInfo(Integer id, String name) {
+            this.id = id;
+            this.name = name;
+        }
+    }
 
     // Constructeur à partir de l'entité Comment
     public CommentDTO(com.bnm.recouvrement.entity.Comment comment) {
@@ -14,8 +25,17 @@ public class CommentDTO {
         this.content = comment.getContent();
         this.createdAt = comment.getCreatedAt().toString();
         this.dossierId = comment.getDossier().getId();
+        if (comment.getUser() != null) {
+            this.user = new UserInfo(comment.getUser().getId(), comment.getUser().getName());
+        }
     }
 
+    public UserInfo getUser() {
+        return user;
+    }
+    public void setUser(UserInfo user) {
+        this.user = user;
+    }
     // Getters et setters
     public Long getId() {
         return id;

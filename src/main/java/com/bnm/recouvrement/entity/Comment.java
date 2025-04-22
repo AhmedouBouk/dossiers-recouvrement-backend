@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "comments")
 public class Comment {
+    // ... autres champs ...
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
