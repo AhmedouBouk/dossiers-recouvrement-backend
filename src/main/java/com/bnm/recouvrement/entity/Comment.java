@@ -17,6 +17,7 @@ import jakarta.persistence.Table;
 @Entity
 @Table(name = "comments")
 public class Comment {
+    // ... autres champs ...
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -31,6 +32,14 @@ public class Comment {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "dossier_id", nullable = false)
     private DossierRecouvrement dossier;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @Column(name = "reminder_date_time")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss")
+    private LocalDateTime reminderDateTime;
 
     public Comment() {
         this.createdAt = LocalDateTime.now();
@@ -66,5 +75,21 @@ public class Comment {
 
     public void setDossier(DossierRecouvrement dossier) {
         this.dossier = dossier;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
+    public LocalDateTime getReminderDateTime() {
+        return reminderDateTime;
+    }
+
+    public void setReminderDateTime(LocalDateTime reminderDateTime) {
+        this.reminderDateTime = reminderDateTime;
     }
 }

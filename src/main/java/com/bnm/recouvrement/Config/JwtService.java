@@ -50,10 +50,19 @@ public String generateToken(UserDetails userDetails) {
     User user = (User) userDetails; // Cast UserDetails to User
     Map<String, Object> claims = new HashMap<>();
     
+    // Add user ID to claims
+    claims.put("userId", user.getId());
+    
+    // Add role and permissions
     claims.put("role", user.getRole().getName());  // Add role
     claims.put("permissions", user.getRole().getPermissions().stream()
                                   .map(Permission::getName)
                                   .collect(Collectors.toList())); // Add permissions
+    
+    // Add user type if available
+    if (user.getUserType() != null) {
+        claims.put("userType", user.getUserType());
+    }
     
     return generateToken(claims, userDetails);
 }
