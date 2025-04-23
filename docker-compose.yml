@@ -1,0 +1,33 @@
+version: '3.9'
+
+services:
+  backend:
+    build: ./dossiers-recouvrement-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/recouvrement_bnm_db
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=s49196554
+
+  frontend:
+    build: dossier_recouvrement_frontend
+    ports:
+      - "4200:80"
+
+  db:
+    image: postgres:14
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: s49196554
+      POSTGRES_DB: recouvrement_bnm_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
