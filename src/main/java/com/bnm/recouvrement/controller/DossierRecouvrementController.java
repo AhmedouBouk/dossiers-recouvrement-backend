@@ -64,12 +64,7 @@ public class DossierRecouvrementController {
             // Filtrer les dossiers en fonction du type d'utilisateur
             List<DossierRecouvrement> filteredDossiers;
 
-            if ("Recouvrement".equals(userType)) {
-                // Afficher uniquement les dossiers avec l'état COMPLET
-                filteredDossiers = dossiers.stream()
-                    .filter(dossier -> dossier.getEtatValidation() == DossierRecouvrement.EtatValidation.COMPLET)
-                    .collect(Collectors.toList());
-            } else if ("Do".equals(userType)) {
+           if ("Do".equals(userType)) {
                 // Afficher uniquement les dossiers dont les champs referencesCredits, referencesCautions, referencesLC ne sont pas null
                 filteredDossiers = dossiers.stream()
                     .filter(dossier -> dossier.getReferencesCredits() != null &&
