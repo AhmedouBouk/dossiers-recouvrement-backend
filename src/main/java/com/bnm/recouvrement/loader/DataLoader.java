@@ -35,7 +35,7 @@ public class DataLoader implements CommandLineRunner {
             "IMPORT_GRANTIE", "READ_GRANTIE", "UPDATE_GRANTIE", "DELETE_GRANTIE", "DOWNLOAD_GRANTIE",
             "IMPORT_CHEQUE", "READ_CHEQUE", "UPDATE_CHEQUE", "DELETE_CHEQUE", "DOWNLOAD_CHEQUE",
             "DETECT_DOSSIERRECOUVREMENT", "ADD_DOSSIERRECOUVREMENT", "UPDATE_DOSSIERRECOUVREMENT", 
-            "MODIFY_DOSSIERRECOUVREMENT", "DELETE_DOSSIERRECOUVREMENT", "DOWNLOAD_DOSSIERRECOUVREMENT",
+         "DELETE_DOSSIERRECOUVREMENT", "DOWNLOAD_DOSSIERRECOUVREMENT",
             "MANAGE_AGENCE_USERS", "READ_AGENCE_USERS",
         
             // Permissions pour les crédits
@@ -45,7 +45,9 @@ public class DataLoader implements CommandLineRunner {
             // Permissions pour les lettres de crédit (LC)
             "CREATE_LC", "READ_LC", "UPDATE_LC", "DELETE_LC",
             "DOWNLOAD_LC_FILE", "UPLOAD_LC_FILE",
-        
+            "DOWNLOAD_MISE_EN_DEMEURE",
+            "COMMENTAIRE_DOSSIER",
+            "VALIDATION_DOSSIER",
             // Permissions pour les cautions
             "CREATE_CAUTION", "READ_CAUTION", "UPDATE_CAUTION", "DELETE_CAUTION",
             "DOWNLOAD_CAUTION_FILE", "UPLOAD_CAUTION_FILE"
