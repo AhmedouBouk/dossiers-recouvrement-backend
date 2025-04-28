@@ -13,9 +13,12 @@ services:
       - SPRING_DATASOURCE_PASSWORD=s49196554
 
   frontend:
-    build: dossier_recouvrement_frontend
-    ports:
-      - "4200:80"
+    build: ./dossier_recouvrement_frontend
+    # Pas besoin d'exposer directement 4200
+    # ports:
+    #   - "4200:80"
+    depends_on:
+      - backend
 
   db:
     image: postgres:14
@@ -28,6 +31,14 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+
+  nginx:
+    build: ./dossier_recouvrement_frontend/nginx
+    ports:
+      - "80:80" # On expose tout sur http://localhost
+    depends_on:
+      - frontend
+      - backend
 
 volumes:
   postgres_data:
