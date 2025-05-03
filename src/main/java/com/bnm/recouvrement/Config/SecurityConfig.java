@@ -2,7 +2,7 @@ package com.bnm.recouvrement.Config;
 
 import lombok.RequiredArgsConstructor;
 
-import java.util.List;
+import java.util.Arrays;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -13,6 +13,9 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
 @EnableWebSecurity
@@ -23,24 +26,32 @@ public class SecurityConfig {
     private final AuthenticationProvider authenticationProvider;
 
     @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+        configuration.setAllowedOrigins(Arrays.asList("*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedHeaders(Arrays.asList("*"));
+        configuration.setExposedHeaders(Arrays.asList("Authorization"));
+        configuration.setAllowCredentials(false);
+        
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+    
+    @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-            .csrf(csrf -> csrf.disable()) // Désactiver CSRF (nécessaire pour les API stateless)
-            .cors(cors -> cors.configurationSource(request -> {
-                var corsConfig = new org.springframework.web.cors.CorsConfiguration();
-                corsConfig.setAllowedOrigins(List.of("http://localhost:4200")); // Autoriser le frontend Angular
-                corsConfig.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS")); // Méthodes autorisées
-                corsConfig.setAllowedHeaders(List.of("*")); // Autoriser tous les en-têtes
-                corsConfig.setAllowCredentials(true); // Autoriser les cookies et les en-têtes d'authentification
-                corsConfig.setExposedHeaders(List.of("Authorization")); // Exposer l'en-tête Authorization
-                return corsConfig;
-            }))
+            .csrf(csrf -> csrf.disable())
+            .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .authorizeHttpRequests(auth -> auth
                 // Autoriser les requêtes OPTIONS pour CORS
                 .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+                
+                // Authentication endpoints - Allow without authentication
+                .requestMatchers("/auth/**").permitAll() // All auth endpoints are public
     
                 // CLIENTS - Dynamic permission-based access control
-                .requestMatchers("/auth/**").permitAll()  // Allow login
                 .requestMatchers("/clients/**").hasAuthority("READ_CLIENT")
                 .requestMatchers("/clients/create").hasAuthority("CREATE_CLIENT")
                 .requestMatchers("/clients/update/**").hasAuthority("UPDATE_CLIENT")
@@ -66,7 +77,7 @@ public class SecurityConfig {
                 .requestMatchers("/DossierRecouvrement/delete/**").hasAuthority("DELETE_DOSSIER")
     
                 // ADMIN - Only Admins can access these endpoints
-                .requestMatchers("/admin/**").hasRole("ADMIN")
+                .requestMatchers("/admin/**").permitAll()
                 .requestMatchers(HttpMethod.POST, "/admin/roles").hasAuthority("CREATE_ROLE")
                 .requestMatchers(HttpMethod.GET, "/admin/roles").hasAuthority("READ_ROLE")
                 .requestMatchers(HttpMethod.PUT, "/admin/roles/**").hasAuthority("UPDATE_ROLE")

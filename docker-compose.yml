@@ -2,7 +2,7 @@ version: '3.9'
 
 services:
   backend:
-    build: ./dossiers-recouvrement-backend
+    build: .
     ports:
       - "8080:8080"
     depends_on:
@@ -13,7 +13,7 @@ services:
       - SPRING_DATASOURCE_PASSWORD=s49196554
 
   frontend:
-    build: dossier_recouvrement_frontend
+    build: ../dossier_recouvrement_frontend
     ports:
       - "4200:80"
 
