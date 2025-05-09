@@ -15,6 +15,8 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -60,6 +62,14 @@ public class AuthService {
 
         User user = userRepository.findByEmail(authRequest.getEmail())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+
+        // Vérifier si le rôle de l'utilisateur est actif
+        if (user.getRole() == null) { 
+            throw new BadCredentialsException("User has no assigned role."); 
+        }
+        if (!user.getRole().isActive()) {
+            throw new DisabledException("The account's role ('" + user.getRole().getName() + "') is currently deactivated. Please contact an administrator.");
+        }
 
         return new AuthResponse(jwtService.generateToken(user));
     }
