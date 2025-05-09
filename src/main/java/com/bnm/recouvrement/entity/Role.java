@@ -23,14 +23,17 @@ public class Role {
     )
     private Set<Permission> permissions = new HashSet<>();
 
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT TRUE")
+    private boolean active = true;
 
     public Role() {
     }
 
-    public Role(Long id, String name, Set<Permission> permissions) {
+    public Role(Long id, String name, Set<Permission> permissions, boolean active) {
         this.id = id;
         this.name = name;
         this.permissions = permissions;
+        this.active = active;
     }
 
     public Long getId() {
@@ -57,6 +60,14 @@ public class Role {
         this.permissions = permissions;
     }
 
+    public boolean isActive() {
+        return this.active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+    }
+
     public Role id(Long id) {
         setId(id);
         return this;
@@ -72,6 +83,11 @@ public class Role {
         return this;
     }
 
+    public Role active(boolean active) {
+        setActive(active);
+        return this;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == this)
@@ -80,12 +96,12 @@ public class Role {
             return false;
         }
         Role role = (Role) o;
-        return Objects.equals(id, role.id) && Objects.equals(name, role.name) && Objects.equals(permissions, role.permissions);
+        return Objects.equals(id, role.id) && Objects.equals(name, role.name) && Objects.equals(permissions, role.permissions) && Objects.equals(active, role.active);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id, name, permissions);
+        return Objects.hash(id, name, permissions, active);
     }
 
     @Override
@@ -94,8 +110,7 @@ public class Role {
             " id='" + getId() + "'" +
             ", name='" + getName() + "'" +
             ", permissions='" + getPermissions() + "'" +
+            ", active='" + isActive() + "'" +
             "}";
     }
-    
 }
-

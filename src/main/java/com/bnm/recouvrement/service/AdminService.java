@@ -207,4 +207,14 @@ public Role updateRole(Long roleId, RoleRequest request) {
     
     return roleRepository.save(role);
 }
+
+    // Toggle active status of an existing role
+    public Role toggleRoleStatus(Long roleId) {
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new RuntimeException("Role not found with ID: " + roleId));
+        
+        role.setActive(!role.isActive()); // Inverse le statut actuel
+        
+        return roleRepository.save(role);
+    }
 }
