@@ -114,13 +114,33 @@ public class AdminService {
 
     // Admin adds a new user (with dynamic role)
     public User addUser(UserDto request) {
-        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
-            throw new IllegalStateException("Email already taken");
+        // Validation des champs obligatoires
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            throw new IllegalArgumentException("L'email est obligatoire");
+        }
+        
+        if (request.getName() == null || request.getName().trim().isEmpty()) {
+            throw new IllegalArgumentException("Le nom est obligatoire");
         }
         
         // Validation du mot de passe
-        if (request.getPassword() == null || request.getPassword().isEmpty()) {
-            throw new IllegalArgumentException("Password cannot be null or empty");
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            throw new IllegalArgumentException("Le mot de passe est obligatoire");
+        }
+        
+        if (request.getPassword().length() < 8) { 
+            throw new IllegalArgumentException("Le mot de passe doit contenir au moins 8 caractères");
+        }
+
+        // Ajout de la validation pour le chiffre et le caractère spécial
+        String passwordPattern = "^(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>\\/?]).*$";
+        if (!request.getPassword().matches(passwordPattern)) {
+            throw new IllegalArgumentException("Le mot de passe doit contenir au moins un chiffre et un caractère spécial.");
+        }
+        
+        // Vérification si l'utilisateur existe déjà
+        if (userRepository.findByEmail(request.getEmail()).isPresent()) {
+            throw new IllegalStateException("Cet email est déjà utilisé par un autre utilisateur");
         }
         
         System.out.println("Adding user with email: " + request.getEmail());
@@ -187,4 +207,14 @@ public Role updateRole(Long roleId, RoleRequest request) {
     
     return roleRepository.save(role);
 }
+
+    // Toggle active status of an existing role
+    public Role toggleRoleStatus(Long roleId) {
+        Role role = roleRepository.findById(roleId)
+                .orElseThrow(() -> new RuntimeException("Role not found with ID: " + roleId));
+        
+        role.setActive(!role.isActive()); // Inverse le statut actuel
+        
+        return roleRepository.save(role);
+    }
 }

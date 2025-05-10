@@ -2,30 +2,45 @@ package com.bnm.recouvrement.loader;
 
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import com.bnm.recouvrement.dao.PermissionRepository;
 import com.bnm.recouvrement.dao.RoleRepository;
+import com.bnm.recouvrement.dao.UserRepository;
 import com.bnm.recouvrement.entity.Permission;
 import com.bnm.recouvrement.entity.Role;
+import com.bnm.recouvrement.entity.User;
 
 @Component
 public class DataLoader implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(DataLoader.class);
+
     private final PermissionRepository permissionRepository;
     private final RoleRepository roleRepository;
+    private final UserRepository userRepository;
+    private final BCryptPasswordEncoder passwordEncoder;
 
     @Autowired
-    public DataLoader(PermissionRepository permissionRepository, RoleRepository roleRepository) {
+    public DataLoader(PermissionRepository permissionRepository, RoleRepository roleRepository, 
+                     UserRepository userRepository, BCryptPasswordEncoder passwordEncoder) {
         this.permissionRepository = permissionRepository;
         this.roleRepository = roleRepository;
+        this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public void run(String... args) throws Exception {
+        log.info("Démarrage de DataLoader pour initialiser les données...");
         // Créer les permissions par défaut
         List<String> defaultPermissions = List.of(
             // Permissions existantes
@@ -93,5 +108,42 @@ public class DataLoader implements CommandLineRunner {
             adminRole.setPermissions(adminPermissions);
             roleRepository.save(adminRole);
         }
+        
+        // Créer l'utilisateur admin par défaut s'il n'existe pas
+        String adminEmail = "admin@bnm.mr";
+        log.info("Vérification de l'existence d'un utilisateur admin avec l'email: {}", adminEmail);
+        Optional<User> existingAdmin = userRepository.findByEmail(adminEmail);
+        
+        if (existingAdmin.isPresent()) {
+            log.info("Utilisateur admin existant trouvé: ID={}, Role={}", existingAdmin.get().getId(), existingAdmin.get().getRole().getName());
+        } else {
+            log.info("Aucun utilisateur admin existant trouvé avec l'email: {}. Création d'un nouvel utilisateur...", adminEmail);
+            try {
+                // Récupérer le rôle ADMIN
+                Optional<Role> adminRole = roleRepository.findByName("ADMIN");
+                
+                if (adminRole.isPresent()) {
+                    // S'assurer que le rôle a toutes les permissions nécessaires
+                    Role role = adminRole.get();
+                    
+                    User adminUser = new User();
+                    adminUser.setName("Admin");
+                    adminUser.setEmail(adminEmail);
+                    adminUser.setPassword(passwordEncoder.encode("123456"));
+                    adminUser.setUserType("ADMIN");
+                    adminUser.setRole(role);
+                    
+                    User savedUser = userRepository.save(adminUser);
+                    log.info("Utilisateur admin créé avec succès : {}", adminUser.getEmail());
+                    log.info("ID de l'utilisateur: {}", savedUser.getId());
+                    log.info("Rôle de l'utilisateur: {}", savedUser.getRole().getName());
+                } else {
+                    log.error("Impossible de créer l'utilisateur admin: Rôle ADMIN introuvable.");
+                }
+            } catch (Exception e) {
+                log.error("Erreur lors de la création de l'utilisateur admin", e);
+            }
+        }
+        log.info("Fin de DataLoader.");
     }
 }
