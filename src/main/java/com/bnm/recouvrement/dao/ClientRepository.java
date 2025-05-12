@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.bnm.recouvrement.entity.Client;
@@ -20,4 +22,9 @@ public interface ClientRepository extends JpaRepository<Client, Integer> {
 
     List<Client> findByNomContainingIgnoreCase(String nom);
     
+    @Query("SELECT c FROM Client c WHERE " +
+           "CAST(c.nni AS string) LIKE %:search% OR " +
+           "LOWER(c.nom) LIKE %:search% OR " +
+           "LOWER(c.prenom) LIKE %:search%")
+    List<Client> globalSearch(@Param("search") String search);
 }

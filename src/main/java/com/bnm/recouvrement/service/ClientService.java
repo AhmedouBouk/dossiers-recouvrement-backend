@@ -151,8 +151,10 @@ public class ClientService {
         clientRepository.deleteById(nni);
     }
    
-    public List<Client> rechercherClients(String nom, String prenom, Integer nni) {
-        if (nni != null) {
+    public List<Client> rechercherClients(String nom, String prenom, Integer nni, String globalSearch) {
+        if (globalSearch != null && !globalSearch.isBlank()) {
+            return clientRepository.globalSearch(globalSearch.toLowerCase());
+        } else if (nni != null) {
             return clientRepository.findByNni(nni)
                     .map(List::of) // Wrap the client in a List if found
                     .orElseGet(List::of); // Return an empty List if not found
