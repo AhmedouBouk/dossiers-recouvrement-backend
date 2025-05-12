@@ -68,8 +68,9 @@ public class CompteService {
                     String etat = data[4];
                     LocalDate dateOuverture = LocalDate.parse(data[5]);
                     int categorie = Integer.parseInt(data[6]);
+                    
                     Compte compte = compteRepository.findById(nomCompte)
-                        .orElse(new Compte(client, nomCompte, libelecategorie, categorie, solde, etat, dateOuverture));
+                        .orElse(new Compte(client, nomCompte, libelecategorie, solde, etat, dateOuverture, categorie));
 
                     if (compteRepository.existsById(nomCompte)) {
                         compte.setSolde(solde);
@@ -155,10 +156,12 @@ public class CompteService {
         compteRepository.deleteById(nomCompte);
     }
 
-    public List<CompteDTO> rechercherComptesAvecDTO(String nomCompte, String nom, String prenom, Integer nni) {
+    public List<CompteDTO> rechercherComptesAvecDTO(String nomCompte, String nom, String prenom, Integer nni, String globalSearch) {
         List<Compte> comptes;
     
-        if (nomCompte != null) {
+        if (globalSearch != null && !globalSearch.isBlank()) {
+            comptes = compteRepository.globalSearch(globalSearch.toLowerCase());
+        } else if (nomCompte != null) {
             comptes = compteRepository.findByNomCompte(nomCompte)
                     .map(Collections::singletonList)
                     .orElse(Collections.emptyList());
@@ -203,17 +206,7 @@ public class CompteService {
         compteDTO.setDateOuverture(compte.getDateOuverture());
         
         if (compte.getClient() != null) {
-            ClientDTO clientDTO = new ClientDTO(
-                compte.getClient().getNni(),
-                compte.getClient().getNif(),
-                compte.getClient().getNom(),
-                compte.getClient().getPrenom(),
-                compte.getClient().getDateNaissance(),
-                compte.getClient().getSecteurActivite(),
-                compte.getClient().getGenre(),
-                compte.getClient().getSalaire(),
-                compte.getClient().getAdresse()
-            );
+            ClientDTO clientDTO = new ClientDTO(compte.getClient());
             compteDTO.setClient(clientDTO);
         }
         

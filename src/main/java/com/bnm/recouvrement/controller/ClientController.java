@@ -87,14 +87,10 @@ public class ClientController {
     public ResponseEntity<List<Client>> rechercherClients(
             @RequestParam(required = false) String nom,
             @RequestParam(required = false) String prenom,
-            @RequestParam(required = false) Integer nni) {
-        List<Client> clients = clientService.rechercherClients(nom, prenom, nni);
-    
-        if (!clients.isEmpty()) {
-            return ResponseEntity.ok(clients);
-        } else {
-            return ResponseEntity.noContent().build();
-        }
+            @RequestParam(required = false) Integer nni,
+            @RequestParam(required = false) String globalSearch) {
+        List<Client> clients = clientService.rechercherClients(nom, prenom, nni, globalSearch);
+        return ResponseEntity.ok(clients);
     }
     @GetMapping("/{nni}")
     @PreAuthorize("isAuthenticated()")

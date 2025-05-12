@@ -61,5 +61,60 @@ private Client client;
         this.categorie=catagorie;
     }
 
-   
+    // Getters and Setters
+    public Client getClient() {
+        return client;
+    }
+
+    public void setClient(Client client) {
+        this.client = client;
+    }
+
+    public String getNomCompte() {
+        return nomCompte;
+    }
+
+    public void setNomCompte(String nomCompte) {
+        this.nomCompte = nomCompte;
+    }
+
+    public String getLibelecategorie() {
+        return libelecategorie;
+    }
+
+    public void setLibelecategorie(String libelecategorie) {
+        this.libelecategorie = libelecategorie;
+    }
+
+    public int getCategorie() {
+        return categorie;
+    }
+
+    public void setCategorie(int categorie) {
+        this.categorie = categorie;
+    }
+
+    public Double getSolde() {
+        return solde;
+    }
+
+    public void setSolde(Double solde) {
+        this.solde = solde;
+    }
+
+    public String getEtat() {
+        return etat;
+    }
+
+    public void setEtat(String etat) {
+        this.etat = etat;
+    }
+
+    public LocalDate getDateOuverture() {
+        return dateOuverture;
+    }
+
+    public void setDateOuverture(LocalDate dateOuverture) {
+        this.dateOuverture = dateOuverture;
+    }
 }
