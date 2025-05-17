@@ -29,6 +29,7 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final HistoryService historyService;
 
     public AuthResponse register(UserDto request) {
         Role role = roleRepository.findByName(request.getRole())
@@ -70,6 +71,24 @@ public class AuthService {
         if (!user.getRole().isActive()) {
             throw new DisabledException("The account's role ('" + user.getRole().getName() + "') is currently deactivated. Please contact an administrator.");
         }
+
+        
+        // Enregistrer l'événement de connexion dans l'historique
+        String details = "Connexion réussie";
+        if (user.getRole() != null) {
+            details += " - Rôle: " + user.getRole().getName();
+        }
+        if (user.getAgence() != null) {
+            details += " - Agence: " + user.getAgence().getNom();
+        }
+        historyService.createEvent(
+            user.getEmail(),
+            "LOGIN",
+            "USER",
+            user.getId() != null ? user.getId().toString() : null,
+            user.getName(),
+            details
+        );
 
         return new AuthResponse(jwtService.generateToken(user));
     }
