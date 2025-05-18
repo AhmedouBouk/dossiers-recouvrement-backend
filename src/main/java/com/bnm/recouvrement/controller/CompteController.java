@@ -96,31 +96,29 @@ public class CompteController {
     }
 
     @GetMapping("/recherche")
-@PreAuthorize("isAuthenticated()")
-public ResponseEntity<List<CompteDTO>> rechercherComptesAvecDTO(
-        @RequestParam(required = false) String nomCompte,
-        @RequestParam(required = false) String nom,
-        @RequestParam(required = false) String prenom,
-        @RequestParam(required = false) Integer nni) {
-    try {
-        List<CompteDTO> comptes = compteService.rechercherComptesAvecDTO(nomCompte, nom, prenom, nni);
-        if (!comptes.isEmpty()) {
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<List<CompteDTO>> rechercherComptesAvecDTO(
+            @RequestParam(required = false) String nomCompte,
+            @RequestParam(required = false) String nom,
+            @RequestParam(required = false) String prenom,
+            @RequestParam(required = false) Integer nni,
+            @RequestParam(required = false) String globalSearch) {
+        try {
+            List<CompteDTO> comptes = compteService.rechercherComptesAvecDTO(nomCompte, nom, prenom, nni, globalSearch);
             return ResponseEntity.ok(comptes);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
-        return ResponseEntity.noContent().build();
-    } catch (Exception e) {
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
-}
 
     @GetMapping("/{nomCompte}")
-public ResponseEntity<Compte> getCompteByNomCompte(@PathVariable String nomCompte) {
-    Optional<Compte> compteOpt = compteService.getCompteByNomCompte(nomCompte);
-    if (compteOpt.isPresent()) {
-        return ResponseEntity.ok(compteOpt.get());
-    } else {
-        return ResponseEntity.notFound().build();
+    public ResponseEntity<Compte> getCompteByNomCompte(@PathVariable String nomCompte) {
+        Optional<Compte> compteOpt = compteService.getCompteByNomCompte(nomCompte);
+        if (compteOpt.isPresent()) {
+            return ResponseEntity.ok(compteOpt.get());
+        } else {
+            return ResponseEntity.notFound().build();
+        }
     }
-}
 
 }

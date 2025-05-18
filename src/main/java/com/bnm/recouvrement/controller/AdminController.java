@@ -133,4 +133,14 @@ public class AdminController {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
     }
+
+    @PutMapping("/roles/{id}/toggle-status")
+    public ResponseEntity<?> toggleRoleStatus(@PathVariable Long id) {
+        try {
+            Role updatedRole = adminService.toggleRoleStatus(id);
+            return ResponseEntity.ok(updatedRole);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(e.getMessage());
+        }
+    }
 }
