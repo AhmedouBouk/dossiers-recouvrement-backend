@@ -28,6 +28,10 @@ public class HistoryService {
         return historyEventRepository.findByEntityTypeAndEntityIdOrderByTimestampDesc(entityType, entityId);
     }
 
+    public HistoryEvent createEvent(HistoryEvent event) {
+        return historyEventRepository.save(event);
+    }
+
     public HistoryEvent createEvent(String username, String action, String entityType, 
                                    String entityId, String entityName, String details) {
         HistoryEvent event = HistoryEvent.builder()
