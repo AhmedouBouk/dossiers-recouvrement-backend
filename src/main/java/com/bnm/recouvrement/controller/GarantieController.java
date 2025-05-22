@@ -6,6 +6,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -17,6 +25,8 @@ public class GarantieController {
 
     @Autowired
     private GarantieService garantieService;
+@Autowired
+private DossierRecouvrementRepository dossierRecouvrementRepository;
 
     // Uploader un fichier de garantie
     @PostMapping("/{dossierId}/garantie")
@@ -59,4 +69,35 @@ public ResponseEntity<Map<String, String>> deleteGarantieFile(@PathVariable Long
         return ResponseEntity.status(500).body(response);
     }
 
-}}
+}
+
+
+
+  @GetMapping("/pdf/{id}")
+    public ResponseEntity<byte[]> getGarantiePdf(@PathVariable Long id) {
+        DossierRecouvrement dossier = dossierRecouvrementRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
+
+        String filePath = dossier.getGarantiesFile();  // Exemple : "uploads/garanties/garantie_3.pdf"
+        if (filePath == null || filePath.isBlank()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        try {
+            Path path = Paths.get(filePath);
+            byte[] pdf = Files.readAllBytes(path);
+
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(pdf);
+
+        } catch (IOException e) {
+            System.out.println("Erreur lecture fichier garantie : " + e.getMessage());
+            return ResponseEntity.notFound().build();
+        }
+    }
+@GetMapping("/api/debug/dossier/{id}")
+public DossierRecouvrement testDossier(@PathVariable Long id) {
+    return dossierRecouvrementRepository.findById(id).orElseThrow();
+}
+}

@@ -8,6 +8,25 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import com.bnm.recouvrement.entity.DossierRecouvrement;
+import com.bnm.recouvrement.entity.DossierRecouvrement;
+
+import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
+
+
+import java.io.ByteArrayOutputStream;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.pdf.PdfWriter;
+
+
+import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
+import com.bnm.recouvrement.service.NotificationService;
+
+import java.io.ByteArrayOutputStream;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.pdf.PdfCopy;
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.PdfWriter;
 
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
@@ -30,6 +49,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.File;
 
 import java.io.IOException;
+import java.nio.file.Files;
+
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bnm.recouvrement.dao.CompteRepository;

@@ -7,7 +7,13 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +33,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 
 import java.io.File;
 import java.io.IOException;
@@ -41,6 +48,10 @@ public class CreditsController {
 
     @Autowired
     private CreditsService creditsService;
+
+@Autowired
+private DossierRecouvrementRepository dossierRecouvrementRepository;
+
 
     // Uploader un fichier de crédit
     @PostMapping("/{dossierId}/upload")
@@ -72,4 +83,26 @@ public class CreditsController {
             return ResponseEntity.status(404).body("Aucun fichier de crédit trouvé");
         }
     }
+
+      private final String basePath = "./uploads/credits/";
+   @GetMapping("/api/credits/pdf/{id}")
+public ResponseEntity<byte[]> getCreditPdf(@PathVariable Long id) {
+    DossierRecouvrement dossier = dossierRecouvrementRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
+
+    String filePath = dossier.getCreditsFile(); // ← exemple : "uploads/credits/credit_3.pdf"
+    if (filePath == null || filePath.isBlank()) {
+        return ResponseEntity.notFound().build();
+    }
+
+    try {
+        byte[] pdf = Files.readAllBytes(Paths.get(filePath));
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
+    } catch (IOException e) {
+        System.out.println("❌ Erreur lecture fichier crédit : " + e.getMessage());
+        return ResponseEntity.notFound().build();
+    }
+}
 }

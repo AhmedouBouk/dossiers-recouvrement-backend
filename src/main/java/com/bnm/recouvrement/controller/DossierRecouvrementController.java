@@ -1,4 +1,32 @@
 package com.bnm.recouvrement.controller;
+import org.apache.pdfbox.multipdf.PDFMergerUtility;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.apache.pdfbox.multipdf.PDFMergerUtility;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import java.util.HashMap;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.List;
+import java.io.File;
+import org.apache.pdfbox.pdmodel.PDDocument;
+
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.util.ArrayList;
+import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
+import com.bnm.recouvrement.entity.DossierRecouvrement;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -9,14 +37,18 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+
+import org.apache.pdfbox.multipdf.PDFMergerUtility;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 
 import com.bnm.recouvrement.entity.Agence;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
@@ -42,7 +74,7 @@ public class DossierRecouvrementController {
     @Autowired
     private DossierRecouvrementService dossierService;
     @Autowired
-
+    private DossierRecouvrementRepository dossierRecouvrementRepository;
     @GetMapping("/affichage")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<List<DossierRecouvrement>> getAllDossiers() {
@@ -193,4 +225,173 @@ public class DossierRecouvrementController {
                 ));
         }
     }
+     private final String uploadsBasePath = "uploads"; // Modifier selon votre configuration
+
+    @GetMapping("/test")
+    public String testRoute() {
+        return "✅ Fusion Controller OK";
+    }
+ 
+
+@PostMapping(value = "/{id}/fusionner-complet", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+public ResponseEntity<byte[]> fusionnerTout(
+        @PathVariable Long id,
+        @RequestParam("detailsPdf") MultipartFile detailsPdf,
+        @RequestParam("miseEnDemeurePdf") MultipartFile miseEnDemeurePdf
+) throws IOException {
+    System.out.println("🚀 Début de la fusion flexible pour le dossier: " + id);
+    
+    // Récupérer les chemins des fichiers backend depuis la base
+    DossierRecouvrement dossier = dossierRecouvrementRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
+
+    // Récupérer tous les chemins (peuvent être null)
+    String garantiePath = dossier.getGarantiesFile();
+    String creditPath = dossier.getCreditsFile();
+    String cautionPath = dossier.getCautionsFile();
+    String chequePath = dossier.getChequeFile();
+    String lcPath = dossier.getLcFile();
+
+    // Démarrer la fusion - TOUJOURS avec les PDFs frontend
+    PDFMergerUtility merger = new PDFMergerUtility();
+    ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+    merger.setDestinationStream(outputStream);
+
+    System.out.println("🔁 Fusion des fichiers frontend obligatoires...");
+    merger.addSource(detailsPdf.getInputStream());
+    merger.addSource(miseEnDemeurePdf.getInputStream());
+
+    // Compteur pour suivre combien de fichiers backend ont été ajoutés
+    int fichersBackendAjoutes = 0;
+
+    // Tenter d'ajouter chaque fichier backend s'il existe
+    fichersBackendAjoutes += ajouterFichierSiExiste(merger, garantiePath, "Garanties");
+    fichersBackendAjoutes += ajouterFichierSiExiste(merger, creditPath, "Crédits");
+    fichersBackendAjoutes += ajouterFichierSiExiste(merger, cautionPath, "Cautions");
+    fichersBackendAjoutes += ajouterFichierSiExiste(merger, chequePath, "Chèque");
+    fichersBackendAjoutes += ajouterFichierSiExiste(merger, lcPath, "LC");
+
+    System.out.println("📊 Résumé: " + fichersBackendAjoutes + " fichiers backend ajoutés à la fusion");
+
+    // Effectuer la fusion (même si aucun fichier backend n'a été ajouté)
+    merger.mergeDocuments(null);
+
+    System.out.println("✅ Fusion flexible réussie !");
+
+    String filename = "fusion-complete-" + id + 
+                     (fichersBackendAjoutes > 0 ? "-" + fichersBackendAjoutes + "files" : "-minimal") + 
+                     ".pdf";
+
+    return ResponseEntity.ok()
+            .contentType(MediaType.APPLICATION_PDF)
+            .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+            .body(outputStream.toByteArray());
 }
+
+/**
+ * Méthode utilitaire pour ajouter un fichier à la fusion s'il existe
+ * @param merger L'objet PDFMergerUtility
+ * @param relativePath Le chemin relatif du fichier
+ * @param nomFichier Le nom du type de fichier pour les logs
+ * @return 1 si le fichier a été ajouté, 0 sinon
+ */
+private int ajouterFichierSiExiste(PDFMergerUtility merger, String relativePath, String nomFichier) {
+    try {
+        if (relativePath == null || relativePath.trim().isEmpty()) {
+            System.out.println("⚠️ Chemin " + nomFichier + " non défini dans la base de données");
+            return 0;
+        }
+
+        String absolutePath = convertToAbsolutePath(relativePath);
+        File file = new File(absolutePath);
+
+        if (!file.exists()) {
+            System.out.println("⚠️ Fichier " + nomFichier + " inexistant: " + absolutePath);
+            return 0;
+        }
+
+        if (!file.canRead()) {
+            System.out.println("⚠️ Fichier " + nomFichier + " non lisible: " + absolutePath);
+            return 0;
+        }
+
+        // Vérifier que c'est bien un PDF valide
+        if (!estPdfValide(file)) {
+            System.out.println("⚠️ Fichier " + nomFichier + " n'est pas un PDF valide: " + absolutePath);
+            return 0;
+        }
+
+        merger.addSource(new FileInputStream(file));
+        System.out.println("✅ Fichier " + nomFichier + " ajouté à la fusion: " + absolutePath);
+        return 1;
+
+    } catch (Exception e) {
+        System.out.println("❌ Erreur lors de l'ajout du fichier " + nomFichier + ": " + e.getMessage());
+        return 0;
+    }
+}
+
+/**
+ * Vérifie si un fichier est un PDF valide
+ */
+private boolean estPdfValide(File file) {
+    try (PDDocument document = PDDocument.load(file)) {
+        return document.getNumberOfPages() > 0;
+    } catch (Exception e) {
+        return false;
+    }
+}
+
+/**
+ * Convertit un chemin relatif en chemin absolu
+ */
+private String convertToAbsolutePath(String relativePath) {
+    if (relativePath == null) return null;
+
+    if (relativePath.startsWith("/")) {
+        relativePath = relativePath.substring(1);
+    }
+
+    return uploadsBasePath + File.separator + relativePath;
+}
+
+
+
+@GetMapping("/{id}/check-files")
+public ResponseEntity<Map<String, Boolean>> checkAvailableFiles(@PathVariable Long id) {
+    try {
+        DossierRecouvrement dossier = dossierRecouvrementRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
+
+        Map<String, Boolean> filesStatus = new HashMap<>();
+        filesStatus.put("garanties", fichierExiste(dossier.getGarantiesFile()));
+        filesStatus.put("credits", fichierExiste(dossier.getCreditsFile()));
+        filesStatus.put("cautions", fichierExiste(dossier.getCautionsFile()));
+        filesStatus.put("cheque", fichierExiste(dossier.getChequeFile()));
+        filesStatus.put("lc", fichierExiste(dossier.getLcFile()));
+        
+        // Calculer si on peut faire une fusion (au moins les PDFs frontend)
+        filesStatus.put("canMerge", true); // Toujours true maintenant
+
+        return ResponseEntity.ok(filesStatus);
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+}
+
+/**
+ * Vérifie si un fichier existe à partir de son chemin relatif
+ */
+private boolean fichierExiste(String relativePath) {
+    if (relativePath == null || relativePath.trim().isEmpty()) {
+        return false;
+    }
+    
+    try {
+        String absolutePath = convertToAbsolutePath(relativePath);
+        File file = new File(absolutePath);
+        return file.exists() && file.canRead() && estPdfValide(file);
+    } catch (Exception e) {
+        return false;
+    }
+}}
