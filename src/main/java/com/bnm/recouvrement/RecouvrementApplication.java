@@ -1,5 +1,3 @@
-
-
 package com.bnm.recouvrement;
 
 import org.springframework.boot.SpringApplication;

@@ -394,4 +394,126 @@ private boolean fichierExiste(String relativePath) {
     } catch (Exception e) {
         return false;
     }
-}}
+}
+
+
+
+// Endpoints à ajouter/modifier dans votre Controller
+
+/**
+ * Récupère tous les dossiers actifs (non archivés)
+ */
+@GetMapping("/actifs")
+public ResponseEntity<List<DossierRecouvrement>> getDossiersActifs() {
+    return ResponseEntity.ok(dossierService.getDossiersActifs());
+}
+
+@GetMapping("/archives")
+public ResponseEntity<List<DossierRecouvrement>> getDossiersArchives() {
+    return ResponseEntity.ok(dossierService.getDossiersArchives());
+}
+
+
+/**
+ * Archive un dossier
+ */
+
+
+/**
+ * Désarchive un dossier
+ */
+
+
+/**
+ * Compte le nombre de dossiers archivés
+ */
+@GetMapping("/archives/count")
+public ResponseEntity<Map<String, Long>> countDossiersArchives() {
+    try {
+        long count = dossierService.countDossiersArchives();
+        Map<String, Long> response = new HashMap<>();
+        response.put("count", count);
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+}
+
+/**
+ * Vérifie si un dossier est archivé
+ */
+@GetMapping("/{id}/is-archived")
+public ResponseEntity<Map<String, Boolean>> isDossierArchive(@PathVariable Long id) {
+    try {
+        boolean isArchived = dossierService.isDossierArchive(id);
+        Map<String, Boolean> response = new HashMap<>();
+        response.put("isArchived", isArchived);
+        return ResponseEntity.ok(response);
+    } catch (Exception e) {
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+}
+
+
+/**
+ * Archive un dossier
+ */
+@PostMapping("/{id}/archiver")
+public ResponseEntity<DossierRecouvrement> archiverDossier(@PathVariable Long id) {
+    try {
+        DossierRecouvrement dossier = dossierService.archiverDossier(id);
+        return ResponseEntity.ok(dossier);
+    } catch (IllegalStateException e) {
+        // ✅ Retour 400 avec message d'erreur détaillé
+        return ResponseEntity.badRequest()
+            .header("Error-Message", e.getMessage())
+            .build();
+    } catch (RuntimeException e) {
+        if (e.getMessage().contains("non trouvé")) {
+            return ResponseEntity.notFound().build();
+        }
+        // ✅ Log l'erreur pour debugging
+        System.err.println("Erreur archivage: " + e.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .header("Error-Message", "Erreur lors de l'archivage")
+            .build();
+    } catch (Exception e) {
+        // ✅ Log l'erreur pour debugging
+        System.err.println("Erreur inattendue archivage: " + e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .header("Error-Message", "Erreur serveur")
+            .build();
+    }
+}
+
+/**
+ * Désarchive un dossier
+ * ✅ CORRECTION : URL corrigée pour correspondre au service Angular
+ */
+@PostMapping("/{id}/desarchiver")
+public ResponseEntity<DossierRecouvrement> desarchiverDossier(@PathVariable Long id) {
+    try {
+        DossierRecouvrement dossier = dossierService.desarchiverDossier(id);
+        return ResponseEntity.ok(dossier);
+    } catch (IllegalStateException e) {
+        return ResponseEntity.badRequest()
+            .header("Error-Message", e.getMessage())
+            .build();
+    } catch (RuntimeException e) {
+        if (e.getMessage().contains("non trouvé")) {
+            return ResponseEntity.notFound().build();
+        }
+        System.err.println("Erreur désarchivage: " + e.getMessage());
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .header("Error-Message", "Erreur lors du désarchivage")
+            .build();
+    } catch (Exception e) {
+        System.err.println("Erreur inattendue désarchivage: " + e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .header("Error-Message", "Erreur serveur")
+            .build();
+    }
+}
+}

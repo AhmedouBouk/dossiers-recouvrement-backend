@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.bnm.recouvrement.entity.DossierRecouvrement;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 
 @Repository
 public interface DossierRecouvrementRepository extends JpaRepository<DossierRecouvrement, Long> {
@@ -16,4 +19,36 @@ public interface DossierRecouvrementRepository extends JpaRepository<DossierReco
     List<DossierRecouvrement> findByCompteClientNomContainingIgnoreCase(String nomClient);
 
     List<DossierRecouvrement> findByGarantiesFileIsNull();
+
+
+
+    List<DossierRecouvrement> findByEtatValidation(DossierRecouvrement.EtatValidation etatValidation);
+
+/**
+ * Trouve tous les dossiers SAUF ceux avec l'état spécifié
+ */
+List<DossierRecouvrement> findByEtatValidationNot(DossierRecouvrement.EtatValidation etatValidation);
+
+/**
+ * Compte les dossiers par état de validation
+ */
+long countByEtatValidation(DossierRecouvrement.EtatValidation etatValidation);
+
+/**
+ * Trouve tous les dossiers archivés avec pagination
+ */
+Page<DossierRecouvrement> findByEtatValidation(DossierRecouvrement.EtatValidation etatValidation, Pageable pageable);
+
+/**
+ * Trouve tous les dossiers actifs (non archivés) avec pagination
+ */
+Page<DossierRecouvrement> findByEtatValidationNot(DossierRecouvrement.EtatValidation etatValidation, Pageable pageable);
+
+
+
+ List<DossierRecouvrement> findByStatus(DossierRecouvrement.Status status);
+    
+    List<DossierRecouvrement> findByStatusNot(DossierRecouvrement.Status status);
+    
+    long countByStatus(DossierRecouvrement.Status status);
 }

@@ -18,6 +18,9 @@ import java.io.ByteArrayOutputStream;
 import com.itextpdf.text.Document;
 import com.itextpdf.text.pdf.PdfWriter;
 
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 import com.bnm.recouvrement.service.NotificationService;
@@ -384,12 +387,8 @@ historyService.createEvent(
 return savedDossier;
 }
 
-/**
- * Met à jour le statut d'un dossier et enregistre l'événement dans l'historique
- * @param dossierId ID du dossier à mettre à jour
- * @param newStatus Nouveau statut du dossier
- * @return Le dossier mis à jour
- */
+
+/* 
 @Transactional
 public DossierRecouvrement updateDossierStatus(Long dossierId, String newStatus) {
     // Récupérer le dossier par son ID
@@ -419,6 +418,141 @@ public DossierRecouvrement updateDossierStatus(Long dossierId, String newStatus)
     );
     
     return updatedDossier;
+} */ 
+
+/**
+ * Récupère tous les dossiers archivés
+ */
+
+/**
+ * Vérifie si un dossier est archivé
+ */
+
+/**
+ * Archive un dossier : change uniquement le statut
+ * @param dossierId ID du dossier à archiver
+ * @return Le dossier archivé
+ */
+@Transactional
+public DossierRecouvrement archiverDossier(Long dossierId) {
+    // Récupérer le dossier
+    DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+            .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
+    
+    // Vérifier que le dossier n'est pas déjà archivé
+    if (DossierRecouvrement.Status.ARCHIVEE.equals(dossier.getStatus())) {
+        throw new IllegalStateException("Le dossier est déjà archivé");
+    }
+    
+    // Sauvegarder l'ancien statut pour l'historique
+    DossierRecouvrement.Status oldStatus = dossier.getStatus();
+    
+    try {
+        // Mettre à jour le statut et la date d'archivage
+        dossier.setStatus(DossierRecouvrement.Status.ARCHIVEE);
+        dossier.setDateArchivage(LocalDateTime.now());
+       
+        // Sauvegarder le dossier
+        DossierRecouvrement archivedDossier = dossierRepository.save(dossier);
+        
+        // Enregistrer dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "archive", 
+            "dossier", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Archivage du dossier - statut: " + (oldStatus != null ? oldStatus : "INITIALE") + " → ARCHIVEE"
+        );
+        
+        return archivedDossier;
+        
+    } catch (Exception e) {
+        throw new RuntimeException("Erreur lors de l'archivage du dossier : " + e.getMessage(), e);
+    }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Récupère tous les dossiers NON archivés (pour la liste principale)
+ */
+// Liste des dossiers NON archivés
+public List<DossierRecouvrement> getDossiersActifs() {
+    return dossierRepository.findByStatusNot(DossierRecouvrement.Status.ARCHIVEE);
 }
+
+// Liste des dossiers archivés
+public List<DossierRecouvrement> getDossiersArchives() {
+    return dossierRepository.findByStatus(DossierRecouvrement.Status.ARCHIVEE);
+}
+
+
+/**
+ * Vérifie si un dossier est archivé
+ */
+public boolean isDossierArchive(Long dossierId) {
+    return dossierRepository.findById(dossierId)
+            .map(dossier -> DossierRecouvrement.Status.ARCHIVEE.equals(dossier.getStatus()))
+            .orElse(false);
+}
+
+/**
+ * Désarchive un dossier
+ */
+@Transactional
+public DossierRecouvrement desarchiverDossier(Long dossierId) {
+    DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+            .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
+    
+    if (!DossierRecouvrement.Status.ARCHIVEE.equals(dossier.getStatus())) {
+        throw new IllegalStateException("Le dossier n'est pas archivé");
+    }
+    
+    try {
+        // Remettre le statut à COMPLET (ou un autre statut par défaut)
+        dossier.setStatus(DossierRecouvrement.Status.EN_COURS);
+        dossier.setDateArchivage(null);
+        
+        DossierRecouvrement restoredDossier = dossierRepository.save(dossier);
+        
+        // Enregistrer dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "unarchive", 
+            "dossier", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Désarchivage du dossier - statut: ARCHIVEE → COMPLET"
+        );
+        
+        return restoredDossier;
+        
+    } catch (Exception e) {
+        throw new RuntimeException("Erreur lors du désarchivage : " + e.getMessage(), e);
+    }
+}
+
+
+/**
+ * Compte le nombre de dossiers archivés
+ */
+public long countDossiersArchives() {
+    return dossierRepository.countByStatus(DossierRecouvrement.Status.ARCHIVEE);
+}}

@@ -49,7 +49,9 @@ public class DossierRecouvrement {
     private Double provision;
     private Double interetsReserves;
 
-    private String status;
+  @Enumerated(EnumType.STRING)
+    private Status status = Status.EN_COURS; // Valeur par défaut
+    
 
     @Enumerated(EnumType.STRING)
     private EtatValidation etatValidation = EtatValidation.INITIALE;
@@ -73,7 +75,17 @@ public class DossierRecouvrement {
 
  
 
-   
+  @Column(name = "date_archivage")
+    private LocalDateTime dateArchivage;
+
+    public LocalDateTime getDateArchivage() {
+        return dateArchivage;
+    }
+
+    public void setDateArchivage(LocalDateTime dateArchivage) {
+        this.dateArchivage = dateArchivage;
+    }
+
 
     public enum EtatValidation {
         INITIALE,
@@ -83,4 +95,10 @@ public class DossierRecouvrement {
         NON_VALIDE
     }
     
+
+public enum Status {
+    EN_COURS,  ARCHIVEE
+}
+
+
 }
