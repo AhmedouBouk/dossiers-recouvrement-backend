@@ -38,7 +38,7 @@ public class DossierRecouvrement {
     private Double interetRetard;
 
  
-    @Column(name = "nature")
+    @Column(name = "nature" ,columnDefinition = "TEXT")
     private String naturesEngagement; // credit, debit, cautions
 
     private String agenceOuvertureCompte;
