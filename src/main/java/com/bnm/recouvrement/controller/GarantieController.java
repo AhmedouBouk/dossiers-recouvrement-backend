@@ -1,13 +1,13 @@
 package com.bnm.recouvrement.controller;
 
 import com.bnm.recouvrement.entity.DossierRecouvrement;
+import com.bnm.recouvrement.entity.Garantie;
 import com.bnm.recouvrement.service.GarantieService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -17,6 +17,7 @@ import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -25,8 +26,8 @@ public class GarantieController {
 
     @Autowired
     private GarantieService garantieService;
-@Autowired
-private DossierRecouvrementRepository dossierRecouvrementRepository;
+    @Autowired
+    private DossierRecouvrementRepository dossierRecouvrementRepository;
 
     // Uploader un fichier de garantie
     @PostMapping("/{dossierId}/garantie")
@@ -37,61 +38,69 @@ private DossierRecouvrementRepository dossierRecouvrementRepository;
         DossierRecouvrement dossier = garantieService.uploadGarantie(dossierId, file, titre);
         return ResponseEntity.ok(dossier);
     }
+    
+    // Récupérer toutes les garanties d'un dossier
+    @GetMapping("/{dossierId}/garanties")
+    public ResponseEntity<List<Garantie>> getGarantiesByDossierId(@PathVariable Long dossierId) {
+        List<Garantie> garanties = garantieService.getGarantiesByDossierId(dossierId);
+        return ResponseEntity.ok(garanties);
+    }
 
-    // Récupérer l'URL du fichier de garantie
-    @GetMapping("/{dossierId}/garantie/url")
-    public ResponseEntity<String> getGarantieFileUrl(@PathVariable Long dossierId) {
-        String garantieFileUrl = garantieService.getGarantieFileUrl(dossierId);
-        if (garantieFileUrl != null) {
-            return ResponseEntity.ok(garantieFileUrl);
-        } else {
-            return ResponseEntity.status(404).body("Aucun fichier de garantie trouvé");
+    // Récupérer une garantie par son ID
+    @GetMapping("/garantie/{garantieId}")
+    public ResponseEntity<Garantie> getGarantieById(@PathVariable Long garantieId) {
+        try {
+            Garantie garantie = garantieService.getGarantieById(garantieId);
+            return ResponseEntity.ok(garantie);
+        } catch (Exception e) {
+            return ResponseEntity.notFound().build();
         }
     }
-    @PutMapping("/{id}")
-    public ResponseEntity<DossierRecouvrement> updateGarantie(
-            @PathVariable Long id,
-            @RequestBody DossierRecouvrement garantieDetails) {
-        DossierRecouvrement updatedGarantie = garantieService.updateGarantie(id, garantieDetails);
+    @PutMapping("/garantie/{garantieId}")
+    public ResponseEntity<Garantie> updateGarantie(
+            @PathVariable Long garantieId,
+            @RequestParam("titre") String nouveauTitre) {
+        Garantie updatedGarantie = garantieService.updateGarantie(garantieId, nouveauTitre);
         return ResponseEntity.ok(updatedGarantie);
     }
     // Supprimer un fichier de garantie
-  @DeleteMapping("/{dossierId}/garantie/delete")
-public ResponseEntity<Map<String, String>> deleteGarantieFile(@PathVariable Long dossierId) {
-    try {
-        garantieService.deleteGarantieFile(dossierId);
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Fichier de garantie supprimé avec succès");
-        return ResponseEntity.ok(response);
-    } catch (Exception e) {
-        Map<String, String> response = new HashMap<>();
-        response.put("message", "Erreur lors de la suppression du fichier");
-        return ResponseEntity.status(500).body(response);
+    @DeleteMapping("/garantie/{garantieId}")
+    public ResponseEntity<Map<String, String>> deleteGarantie(@PathVariable Long garantieId) {
+        try {
+            garantieService.deleteGarantie(garantieId);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Garantie supprimée avec succès");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Erreur lors de la suppression de la garantie");
+            return ResponseEntity.status(500).body(response);
+        }
+    }
+    
+    @DeleteMapping("/{dossierId}/garanties/delete-all")
+    public ResponseEntity<Map<String, String>> deleteAllGaranties(@PathVariable Long dossierId) {
+        try {
+            garantieService.deleteAllGarantiesByDossierId(dossierId);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Toutes les garanties ont été supprimées avec succès");
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Erreur lors de la suppression des garanties");
+            return ResponseEntity.status(500).body(response);
+        }
     }
 
-}
-
-
-
-  @GetMapping("/pdf/{id}")
-    public ResponseEntity<byte[]> getGarantiePdf(@PathVariable Long id) {
-        DossierRecouvrement dossier = dossierRecouvrementRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
-
-        String filePath = dossier.getGarantiesFile();  // Exemple : "uploads/garanties/garantie_3.pdf"
-        if (filePath == null || filePath.isBlank()) {
-            return ResponseEntity.notFound().build();
-        }
-
+    @GetMapping("/garantie/{garantieId}/pdf")
+    public ResponseEntity<byte[]> getGarantiePdf(@PathVariable Long garantieId) {
         try {
-            Path path = Paths.get(filePath);
-            byte[] pdf = Files.readAllBytes(path);
-
+            byte[] pdf = garantieService.getGarantiePdf(garantieId);
+            
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
                     .body(pdf);
-
-        } catch (IOException e) {
+        } catch (Exception e) {
             System.out.println("Erreur lecture fichier garantie : " + e.getMessage());
             return ResponseEntity.notFound().build();
         }

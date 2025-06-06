@@ -18,7 +18,8 @@ public interface DossierRecouvrementRepository extends JpaRepository<DossierReco
 
     List<DossierRecouvrement> findByCompteClientNomContainingIgnoreCase(String nomClient);
 
-    List<DossierRecouvrement> findByGarantiesFileIsNull();
+    // Updated to use the correct property name (filePath instead of file)
+    List<DossierRecouvrement> findByGarantiesFilePathIsNull();
 
 
 

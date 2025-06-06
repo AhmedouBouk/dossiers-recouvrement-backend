@@ -102,16 +102,13 @@ public class DossierRecouvrementService {
             "Dossier #" + dossier.getId()
         );
         
-        // Vérifier si le dossier nécessite un fichier de garantie
-        if (dossier.getGarantiesValeur() != null && !dossier.getGarantiesValeur().isEmpty() 
-                && dossier.getGarantiesFile() == null) {
+        // Vérifier si le dossier a des garanties
+        if (dossier.getGaranties() == null || dossier.getGaranties().isEmpty()) {
             System.out.println("Condition remplie pour envoyer une notification de garantie pour le dossier #" + dossier.getId());
             // Envoyer notification pour le téléchargement de garantie
             notificationService.notifyGarantieUploadRequired(dossier);
         } else {
-            System.out.println("Condition NON remplie pour envoyer une notification de garantie pour le dossier #" + dossier.getId());
-            System.out.println("- Garanties Valeur: " + (dossier.getGarantiesValeur() != null ? dossier.getGarantiesValeur() : "null"));
-            System.out.println("- Garanties File: " + (dossier.getGarantiesFile() != null ? dossier.getGarantiesFile() : "null"));
+            System.out.println("Le dossier #" + dossier.getId() + " a déjà " + dossier.getGaranties().size() + " garantie(s)");
         }
         
         // Vérifier si le dossier a une référence de chèque
@@ -241,6 +238,7 @@ notificationRepository.deleteByDossierId(id);
     
                 // Remplir les champs du dossier
                 dossier.setCompte(compteOpt.get());
+                dossier.setAccountNumber(compteOpt.get().getNomCompte()); // Set the account number
                 dossier.setEngagementTotal(data[3] != null && !data[3].trim().isEmpty() ? parseDoubleOrNull(data[3]) : null);
                 dossier.setMontantPrincipal(data[4] != null && !data[4].trim().isEmpty() ? parseDoubleOrNull(data[4]) : null);
                 dossier.setInteretContractuel(data[5] != null && !data[5].trim().isEmpty() ? parseDoubleOrNull(data[5]) : null);
@@ -262,7 +260,7 @@ notificationRepository.deleteByDossierId(id);
                 // Vérifier si le dossier nécessite un fichier de garantie
                // Vérifier si le dossier nécessite un fichier de garantie
                if (dossier.getGarantiesValeur() != null && !dossier.getGarantiesValeur().isEmpty() 
-               && dossier.getGarantiesFile() == null) {
+               && (dossier.getGaranties() == null || dossier.getGaranties().isEmpty())) {
            System.out.println("Dossier #" + dossier.getId() + " nécessite une garantie - Préparation de notification");
            dossiersRequiringGaranties.add(dossier);
        }

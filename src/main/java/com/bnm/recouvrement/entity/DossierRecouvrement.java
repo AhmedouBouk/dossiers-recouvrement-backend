@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -32,6 +33,9 @@ public class DossierRecouvrement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "account_number", nullable = false)
+    private String accountNumber;
+
     private Double engagementTotal;
     private Double montantPrincipal;
     private Double interetContractuel;
@@ -56,9 +60,11 @@ public class DossierRecouvrement {
     @Enumerated(EnumType.STRING)
     private EtatValidation etatValidation = EtatValidation.INITIALE;
 
-    private String garantiesTitre;
     private String garantiesValeur;
-    private String garantiesFile; // PDF file path
+    
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<Garantie> garanties = new ArrayList<>();
     private String creditsFile; // PDF file path
     private String cautionsFile; // PDF file path
     private String lcFile; // PDF file path
