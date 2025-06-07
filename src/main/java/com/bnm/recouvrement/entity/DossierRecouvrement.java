@@ -74,6 +74,10 @@ public class DossierRecouvrement {
     @JsonManagedReference
     private List<CautionFile> cautionFiles = new ArrayList<>();
     
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<CreditFile> creditFiles = new ArrayList<>();
+    
     private String creditsFile; // PDF file path
     private String cautionsFile; // PDF file path
     private String lcFile; // PDF file path
