@@ -1,108 +1,88 @@
 package com.bnm.recouvrement.controller;
-import java.io.File;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
-import java.util.Optional;
-import java.util.UUID;
-import java.util.stream.Collectors;
+
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.bnm.recouvrement.entity.Agence;
-import com.bnm.recouvrement.entity.DossierRecouvrement;
-import com.bnm.recouvrement.entity.User;
-import com.bnm.recouvrement.service.ChequeService;
+import com.bnm.recouvrement.entity.CreditFile;
 import com.bnm.recouvrement.service.CreditsService;
-import com.bnm.recouvrement.service.DossierRecouvrementService;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.UUID;
 @RestController
 @RequestMapping("/credits")
 @CrossOrigin(origins = "http://localhost:4200")
 public class CreditsController {
 
-    @Autowired
-    private CreditsService creditsService;
+    private final CreditsService creditsService;
+    
+    public CreditsController(CreditsService creditsService) {
+        this.creditsService = creditsService;
+    }
 
-@Autowired
-private DossierRecouvrementRepository dossierRecouvrementRepository;
-
-
-    // Uploader un fichier de crédit
-    @PostMapping("/{dossierId}/upload")
-    public ResponseEntity<DossierRecouvrement> uploadCreditsFile(
+    @PostMapping("/upload/{dossierId}")
+    public ResponseEntity<CreditFile> uploadCreditFile(
             @PathVariable Long dossierId,
-            @RequestParam("file") MultipartFile file) throws IOException {
-        DossierRecouvrement dossier = creditsService.uploadCreditsFile(dossierId, file);
-        return ResponseEntity.ok(dossier);
+            @RequestParam("title") String title,
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "creditNumber", required = false) String creditNumber,
+            @RequestParam(value = "montant", required = false) Double montant,
+            @RequestParam(value = "dateEcheance", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateEcheance) throws IOException {
+        CreditFile savedCreditFile = creditsService.saveCreditFile(dossierId, title, file, creditNumber, montant, dateEcheance);
+        return ResponseEntity.ok(savedCreditFile);
     }
 
-    // Supprimer un fichier de crédit
-    @DeleteMapping("/{dossierId}/delete")
-    public ResponseEntity<String> deleteCreditsFile(@PathVariable Long dossierId) {
-        try {
-            creditsService.deleteCreditsFile(dossierId);
-            return ResponseEntity.ok("Fichier de crédit supprimé avec succès");
-        } catch (Exception e) {
-            return ResponseEntity.status(500).body("Erreur lors de la suppression du fichier");
-        }
+    @GetMapping("/{id}")
+    public ResponseEntity<CreditFile> getCreditFileById(@PathVariable Long id) {
+        return creditsService.getCreditFileById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    // Récupérer l'URL du fichier de crédit
-    @GetMapping("/{dossierId}/url")
-    public ResponseEntity<String> getCreditsFileUrl(@PathVariable Long dossierId) {
-        String creditsFileUrl = creditsService.getCreditsFile(dossierId);
-        if (creditsFileUrl != null) {
-            return ResponseEntity.ok(creditsFileUrl);
-        } else {
-            return ResponseEntity.status(404).body("Aucun fichier de crédit trouvé");
-        }
+    @GetMapping("/dossier/{dossierId}")
+    public ResponseEntity<List<CreditFile>> getCreditFilesByDossierId(@PathVariable Long dossierId) {
+        List<CreditFile> creditFiles = creditsService.getCreditFilesByDossierId(dossierId);
+        return ResponseEntity.ok(creditFiles);
     }
 
-      private final String basePath = "./uploads/credits/";
-   @GetMapping("/api/credits/pdf/{id}")
-public ResponseEntity<byte[]> getCreditPdf(@PathVariable Long id) {
-    DossierRecouvrement dossier = dossierRecouvrementRepository.findById(id)
-        .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
-
-    String filePath = dossier.getCreditsFile(); // ← exemple : "uploads/credits/credit_3.pdf"
-    if (filePath == null || filePath.isBlank()) {
-        return ResponseEntity.notFound().build();
+    @PutMapping("/{id}")
+    public ResponseEntity<CreditFile> updateCreditFile(
+            @PathVariable Long id,
+            @RequestParam("title") String title,
+            @RequestParam(value = "creditNumber", required = false) String creditNumber,
+            @RequestParam(value = "montant", required = false) Double montant,
+            @RequestParam(value = "dateEcheance", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateEcheance) {
+        CreditFile updatedCreditFile = creditsService.updateCreditFile(id, title, creditNumber, montant, dateEcheance);
+        return ResponseEntity.ok(updatedCreditFile);
     }
 
-    try {
-        byte[] pdf = Files.readAllBytes(Paths.get(filePath));
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteCreditFile(@PathVariable Long id) throws IOException {
+        creditsService.deleteCreditFile(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/download/{id}")
+    public ResponseEntity<ByteArrayResource> downloadCreditFile(@PathVariable Long id) throws IOException {
+        CreditFile creditFile = creditsService.getCreditFileById(id)
+                .orElseThrow(() -> new RuntimeException("CreditFile not found with id: " + id));
+
+        byte[] fileContent = creditsService.getCreditFileContent(id);
+        ByteArrayResource resource = new ByteArrayResource(fileContent);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"credit_file_" + creditFile.getTitle() + "\"");
+        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        headers.setContentLength(fileContent.length);
+
         return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_PDF)
-                .body(pdf);
-    } catch (IOException e) {
-        System.out.println("❌ Erreur lecture fichier crédit : " + e.getMessage());
-        return ResponseEntity.notFound().build();
+                .headers(headers)
+                .body(resource);
     }
-}
 }

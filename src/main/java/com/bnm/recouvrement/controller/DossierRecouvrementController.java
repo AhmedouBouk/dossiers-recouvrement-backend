@@ -52,6 +52,7 @@ import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 
 import com.bnm.recouvrement.entity.Agence;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
+import com.bnm.recouvrement.entity.Garantie;
 import com.bnm.recouvrement.entity.User;
 import com.bnm.recouvrement.service.ChequeService;
 import com.bnm.recouvrement.service.DossierRecouvrementService;
@@ -246,7 +247,7 @@ public ResponseEntity<byte[]> fusionnerTout(
             .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
 
     // Récupérer tous les chemins (peuvent être null)
-    String garantiePath = dossier.getGarantiesFile();
+    // Pour les garanties, on utilise maintenant la liste des garanties
     String creditPath = dossier.getCreditsFile();
     String cautionPath = dossier.getCautionsFile();
     String chequePath = dossier.getChequeFile();
@@ -265,7 +266,10 @@ public ResponseEntity<byte[]> fusionnerTout(
     int fichersBackendAjoutes = 0;
 
     // Tenter d'ajouter chaque fichier backend s'il existe
-    fichersBackendAjoutes += ajouterFichierSiExiste(merger, garantiePath, "Garanties");
+    // Pour les garanties, on ajoute tous les fichiers de garantie disponibles
+    for (Garantie garantie : dossier.getGaranties()) {
+        fichersBackendAjoutes += ajouterFichierSiExiste(merger, garantie.getFilePath(), "Garantie: " + garantie.getTitre());
+    }
     fichersBackendAjoutes += ajouterFichierSiExiste(merger, creditPath, "Crédits");
     fichersBackendAjoutes += ajouterFichierSiExiste(merger, cautionPath, "Cautions");
     fichersBackendAjoutes += ajouterFichierSiExiste(merger, chequePath, "Chèque");
@@ -364,7 +368,8 @@ public ResponseEntity<Map<String, Boolean>> checkAvailableFiles(@PathVariable Lo
                 .orElseThrow(() -> new RuntimeException("Dossier introuvable"));
 
         Map<String, Boolean> filesStatus = new HashMap<>();
-        filesStatus.put("garanties", fichierExiste(dossier.getGarantiesFile()));
+        // Vérifier si le dossier a au moins une garantie
+        filesStatus.put("garanties", !dossier.getGaranties().isEmpty());
         filesStatus.put("credits", fichierExiste(dossier.getCreditsFile()));
         filesStatus.put("cautions", fichierExiste(dossier.getCautionsFile()));
         filesStatus.put("cheque", fichierExiste(dossier.getChequeFile()));

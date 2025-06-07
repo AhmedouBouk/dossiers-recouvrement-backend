@@ -1,12 +1,12 @@
 package com.bnm.recouvrement.service;
 
-import org.springframework.stereotype.Service;
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -16,18 +16,20 @@ import java.util.UUID;
 @Service
 public class CautionsService {
 
-    @Autowired
-    private DossierRecouvrementRepository dossierRepository;
-    
-    @Autowired
-    private HistoryService historyService;
+    private final DossierRecouvrementRepository dossierRecouvrementRepository;
+    private final HistoryService historyService;
+
+    public CautionsService(DossierRecouvrementRepository dossierRecouvrementRepository, HistoryService historyService) {
+        this.dossierRecouvrementRepository = dossierRecouvrementRepository;
+        this.historyService = historyService;
+    }
 
     private final Path rootLocation = Paths.get("uploads/cautions");
 
     // Dans CautionsService.java, méthode uploadCautionsFile
 
 public DossierRecouvrement uploadCautionsFile(Long dossierId, MultipartFile file) throws IOException {
-    DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+    DossierRecouvrement dossier = dossierRecouvrementRepository.findById(dossierId)
             .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
 
     // Créer le dossier de stockage s'il n'existe pas
@@ -46,7 +48,7 @@ public DossierRecouvrement uploadCautionsFile(Long dossierId, MultipartFile file
     String fileUrl = "/cautions/" + fileName.replace(" ", "%20"); // Chemin relatif
     dossier.setCautionsFile(fileUrl); // Vérifiez que cette ligne est correcte
     
-    DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
+    DossierRecouvrement updatedDossier = dossierRecouvrementRepository.save(dossier);
     
     // Enregistrer l'événement dans l'historique
     Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -65,14 +67,14 @@ public DossierRecouvrement uploadCautionsFile(Long dossierId, MultipartFile file
 }
 
     public void deleteCautionsFile(Long dossierId) {
-        DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+        DossierRecouvrement dossier = dossierRecouvrementRepository.findById(dossierId)
                 .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
         
         // Enregistrer l'ancien nom du fichier pour l'historique
         String oldFileUrl = dossier.getCautionsFile();
         
         dossier.setCautionsFile(null);
-        dossierRepository.save(dossier);
+        dossierRecouvrementRepository.save(dossier);
         
         // Enregistrer l'événement dans l'historique
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -90,7 +92,7 @@ public DossierRecouvrement uploadCautionsFile(Long dossierId, MultipartFile file
 
   
     public String getCautionsFile(Long dossierId) {
-        return dossierRepository.findById(dossierId)
+        return dossierRecouvrementRepository.findById(dossierId)
             .map(dossier -> {
                 if (dossier.getCautionsFile() != null && !dossier.getCautionsFile().isEmpty()) {
                     String baseUrl = "http://localhost:8080/files"; // Remplace par ton vrai endpoint

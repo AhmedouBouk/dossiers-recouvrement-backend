@@ -1,114 +1,207 @@
 package com.bnm.recouvrement.service;
 
-import org.springframework.stereotype.Service;
+import com.bnm.recouvrement.dao.ChequeFileRepository;
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
+import com.bnm.recouvrement.entity.ChequeFile;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired; // Will be removed after constructor injection
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
 public class ChequeService {
 
-    @Autowired
-    private DossierRecouvrementRepository dossierRepository;
-    
-    @Autowired
-    private HistoryService historyService;
+    private static final Logger logger = LoggerFactory.getLogger(ChequeService.class);
+    private static final String UPLOADS_CHEQUES_PATH = "uploads/cheques";
+    private static final String USER_SYSTEM = "system";
+    private static final String EVENT_TYPE_CHEQUE_FILE = "cheque_file";
+    private static final String LOG_MSG_DOSSIER_PREFIX = "Dossier #";
+    private static final String LOG_MSG_CHEQUE_FILE_PREFIX = " - Cheque File #";
+    private static final String ERROR_MSG_CANNOT_DELETE_PHYSICAL_FILE = "Impossible de supprimer le fichier physique: {} Erreur: {}";
 
-    @Value("${server.port:8080}")
-    private String serverPort;
-    
-    private final Path rootLocation = Paths.get("uploads/cheques");
+    private final DossierRecouvrementRepository dossierRepository;
+    private final ChequeFileRepository chequeFileRepository;
+    private final HistoryService historyService;
+    private final Path rootLocation;
 
-    public DossierRecouvrement uploadChequeFile(Long dossierId, MultipartFile file) throws IOException {
-        DossierRecouvrement dossier = dossierRepository.findById(dossierId)
-                .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
-    
-        // Créer le dossier de stockage s'il n'existe pas
-        if (!Files.exists(rootLocation)) {
-            Files.createDirectories(rootLocation);
-        }
-    
-        // Générer un nom de fichier unique
-        String fileName = UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
-        Path destinationFile = rootLocation.resolve(Paths.get(fileName)).normalize().toAbsolutePath();
-    
-        // Sauvegarder le fichier sur le disque
-        Files.copy(file.getInputStream(), destinationFile);
-    
-        // Important: Stocker seulement le chemin relatif dans la base de données
-        String fileUrl = "/cheques/" + fileName;
-        dossier.setChequeFile(fileUrl);
-    
-        DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
-    
-        // Enregistrer l'événement dans l'historique
-        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-    
-        historyService.createEvent(
-            username,
-            "upload", 
-            "cheque", 
-            dossierId.toString(), 
-            "Dossier #" + dossierId,
-            "Téléchargement du fichier chèque: " + file.getOriginalFilename()
-        );
-    
-        return updatedDossier;
+    @Autowired
+    public ChequeService(DossierRecouvrementRepository dossierRepository,
+                         ChequeFileRepository chequeFileRepository,
+                         HistoryService historyService) {
+        this.dossierRepository = dossierRepository;
+        this.chequeFileRepository = chequeFileRepository;
+        this.historyService = historyService;
+        this.rootLocation = Paths.get(UPLOADS_CHEQUES_PATH);
     }
 
-    public void deleteChequeFile(Long dossierId) {
+    @Transactional
+    public ChequeFile uploadChequeFile(Long dossierId, String title, String chequeNumber, Double montant, 
+                                       LocalDateTime dateEcheance, MultipartFile file) throws IOException {
         DossierRecouvrement dossier = dossierRepository.findById(dossierId)
-            .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
-        
-        // Enregistrer l'ancien nom du fichier pour l'historique
-        String oldFileUrl = dossier.getChequeFile();
-        
-        // Supprimer le fichier physique si nécessaire
-        if (oldFileUrl != null && !oldFileUrl.isEmpty()) {
+                .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec ID: " + dossierId));
+
+        try {
+            if (!Files.exists(rootLocation)) {
+                Files.createDirectories(rootLocation);
+            }
+        } catch (IOException e) {
+            logger.error("Could not create storage directory: {}", rootLocation, e);
+            throw new RuntimeException("Could not create storage directory", e);
+        }
+
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || originalFilename.trim().isEmpty()) {
+            originalFilename = "file"; // Default filename if null or empty
+        }
+        String fileName = UUID.randomUUID().toString() + "_" + originalFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        Path destinationFile = rootLocation.resolve(Paths.get(fileName)).normalize().toAbsolutePath();
+
+        Files.copy(file.getInputStream(), destinationFile);
+
+        String relativeFilePath = "/cheques/" + fileName;
+
+        ChequeFile chequeFile = new ChequeFile();
+        chequeFile.setTitle(title);
+        chequeFile.setFilePath(relativeFilePath);
+        chequeFile.setChequeNumber(chequeNumber);
+        chequeFile.setMontant(montant);
+        chequeFile.setDateEcheance(dateEcheance);
+        chequeFile.setUploadDate(LocalDateTime.now());
+        chequeFile.setDossier(dossier);
+
+        ChequeFile savedChequeFile = chequeFileRepository.save(chequeFile);
+
+        // History event
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth != null && auth.getName() != null ? auth.getName() : USER_SYSTEM;
+        historyService.createEvent(
+                username,
+                "upload",
+                EVENT_TYPE_CHEQUE_FILE,
+                savedChequeFile.getId().toString(),
+                LOG_MSG_DOSSIER_PREFIX + dossierId + LOG_MSG_CHEQUE_FILE_PREFIX + savedChequeFile.getId(),
+                "Téléchargement du fichier chèque: " + originalFilename + " avec titre: " + title
+        );
+
+        return savedChequeFile;
+    }
+
+    public Optional<ChequeFile> getChequeFileById(Long chequeFileId) {
+        return chequeFileRepository.findById(chequeFileId);
+    }
+
+    public List<ChequeFile> getChequeFilesByDossierId(Long dossierId) {
+        return chequeFileRepository.findByDossierId(dossierId);
+    }
+
+    @Transactional
+    public ChequeFile updateChequeFile(Long chequeFileId, String title, String chequeNumber, Double montant, LocalDateTime dateEcheance) {
+        ChequeFile chequeFile = chequeFileRepository.findById(chequeFileId)
+                .orElseThrow(() -> new RuntimeException("Fichier chèque non trouvé avec ID: " + chequeFileId));
+
+        chequeFile.setTitle(title);
+        chequeFile.setChequeNumber(chequeNumber);
+        chequeFile.setMontant(montant);
+        chequeFile.setDateEcheance(dateEcheance);
+        // filePath and uploadDate are not typically updated here
+
+        ChequeFile updatedChequeFile = chequeFileRepository.save(chequeFile);
+
+        // History event
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth != null && auth.getName() != null ? auth.getName() : USER_SYSTEM;
+        historyService.createEvent(
+                username,
+                "update",
+                EVENT_TYPE_CHEQUE_FILE,
+                chequeFileId.toString(),
+                LOG_MSG_DOSSIER_PREFIX + chequeFile.getDossier().getId() + LOG_MSG_CHEQUE_FILE_PREFIX + chequeFileId,
+                "Mise à jour des métadonnées du fichier chèque: " + chequeFile.getFilePath()
+        );
+
+        return updatedChequeFile;
+    }
+
+    @Transactional
+    public void deleteChequeFile(Long chequeFileId) throws IOException {
+        ChequeFile chequeFile = chequeFileRepository.findById(chequeFileId)
+                .orElseThrow(() -> new RuntimeException("Fichier chèque non trouvé avec ID: " + chequeFileId));
+
+        String filePathStr = chequeFile.getFilePath();
+        if (filePathStr != null && !filePathStr.isEmpty()) {
             try {
-                String fileName = oldFileUrl.substring(oldFileUrl.lastIndexOf('/') + 1);
-                Path filePath = rootLocation.resolve(fileName);
-                Files.deleteIfExists(filePath);
+                String fileName = filePathStr.substring(filePathStr.lastIndexOf('/') + 1);
+                Path physicalFile = rootLocation.resolve(fileName);
+                Files.deleteIfExists(physicalFile);
             } catch (IOException e) {
-                // Logger l'erreur mais continuer le processus
-                System.err.println("Impossible de supprimer le fichier: " + e.getMessage());
+                logger.error(ERROR_MSG_CANNOT_DELETE_PHYSICAL_FILE, filePathStr, e.getMessage());
+                // Decide if to re-throw or just log. For now, log and continue to delete DB record.
             }
         }
-        
-        dossier.setChequeFile(null);
-        dossierRepository.save(dossier);
-        
-        // Enregistrer l'événement dans l'historique
+
+        Long dossierId = chequeFile.getDossier().getId();
+        chequeFileRepository.delete(chequeFile);
+
+        // History event
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        String username = auth.getName();
-        
+        String username = auth != null && auth.getName() != null ? auth.getName() : USER_SYSTEM;
         historyService.createEvent(
-            username,
-            "delete", 
-            "cheque", 
-            dossierId.toString(), 
-            "Dossier #" + dossierId,
-            "Suppression du fichier chèque: " + oldFileUrl
+                username,
+                "delete",
+                EVENT_TYPE_CHEQUE_FILE,
+                chequeFileId.toString(),
+                LOG_MSG_DOSSIER_PREFIX + dossierId + LOG_MSG_CHEQUE_FILE_PREFIX + chequeFileId,
+                "Suppression du fichier chèque: " + filePathStr
         );
     }
 
-    public String getChequeFile(Long dossierId) {
-        DossierRecouvrement dossier = dossierRepository.findById(dossierId).orElse(null);
-        if (dossier != null && dossier.getChequeFile() != null) {
-            // Retourne l'URL relative, sera convertie en URL absolue par le frontend si nécessaire
-            return dossier.getChequeFile();
+    @Transactional
+    public void deleteAllChequeFilesByDossierId(Long dossierId) throws IOException {
+        List<ChequeFile> chequeFiles = chequeFileRepository.findByDossierId(dossierId);
+        if (chequeFiles.isEmpty()) {
+            return; // No files to delete
         }
-        return null;
+
+        for (ChequeFile chequeFile : chequeFiles) {
+            String filePathStr = chequeFile.getFilePath();
+            if (filePathStr != null && !filePathStr.isEmpty()) {
+                try {
+                    String fileName = filePathStr.substring(filePathStr.lastIndexOf('/') + 1);
+                    Path physicalFile = rootLocation.resolve(fileName);
+                    Files.deleteIfExists(physicalFile);
+                } catch (IOException e) {
+                    logger.error(ERROR_MSG_CANNOT_DELETE_PHYSICAL_FILE, filePathStr, e.getMessage());
+                    // Continue deleting other files and DB records
+                }
+            }
+        }
+
+        chequeFileRepository.deleteByDossierId(dossierId); // Efficiently delete all by dossierId
+
+        // History event
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth != null && auth.getName() != null ? auth.getName() : USER_SYSTEM;
+        historyService.createEvent(
+                username,
+                "delete_all",
+                EVENT_TYPE_CHEQUE_FILE,
+                dossierId.toString(),
+                LOG_MSG_DOSSIER_PREFIX + dossierId,
+                "Suppression de tous les fichiers chèques pour le dossier."
+        );
     }
 }
