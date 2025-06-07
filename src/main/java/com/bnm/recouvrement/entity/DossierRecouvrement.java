@@ -65,10 +65,15 @@ public class DossierRecouvrement {
     @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonManagedReference
     private List<Garantie> garanties = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<ChequeFile> chequeFiles = new ArrayList<>();
+    
     private String creditsFile; // PDF file path
     private String cautionsFile; // PDF file path
     private String lcFile; // PDF file path
-    private String chequeFile; // PDF file path
+    private String chequeFile; // PDF file path (legacy - kept for backward compatibility)
 
     @ManyToOne
     @JoinColumn(name = "compte_id")
