@@ -70,6 +70,10 @@ public class DossierRecouvrement {
     @JsonManagedReference
     private List<ChequeFile> chequeFiles = new ArrayList<>();
     
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<CautionFile> cautionFiles = new ArrayList<>();
+    
     private String creditsFile; // PDF file path
     private String cautionsFile; // PDF file path
     private String lcFile; // PDF file path
@@ -97,6 +101,13 @@ public class DossierRecouvrement {
         this.dateArchivage = dateArchivage;
     }
 
+    public List<CautionFile> getCautionFiles() {
+        return cautionFiles;
+    }
+
+    public void setCautionFiles(List<CautionFile> cautionFiles) {
+        this.cautionFiles = cautionFiles;
+    }
 
     public enum EtatValidation {
         INITIALE,
