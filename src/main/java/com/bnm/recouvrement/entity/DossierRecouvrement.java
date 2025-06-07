@@ -92,9 +92,11 @@ public class DossierRecouvrement {
     @JsonIgnore // Empêche la sérialisation JSON récursive
     private List<Comment> commentaires = new ArrayList<>();
 
- 
+    @OneToMany(mappedBy = "dossierRecouvrement", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<LcFile> lcFiles = new ArrayList<>();
 
-  @Column(name = "date_archivage")
+    @Column(name = "date_archivage")
     private LocalDateTime dateArchivage;
 
     public LocalDateTime getDateArchivage() {
@@ -111,6 +113,14 @@ public class DossierRecouvrement {
 
     public void setCautionFiles(List<CautionFile> cautionFiles) {
         this.cautionFiles = cautionFiles;
+    }
+
+    public List<LcFile> getLcFiles() {
+        return lcFiles;
+    }
+
+    public void setLcFiles(List<LcFile> lcFiles) {
+        this.lcFiles = lcFiles;
     }
 
     public enum EtatValidation {
