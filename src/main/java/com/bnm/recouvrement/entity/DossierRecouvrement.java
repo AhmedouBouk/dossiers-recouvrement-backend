@@ -53,7 +53,7 @@ public class DossierRecouvrement {
     private Double provision;
     private Double interetsReserves;
 
-  @Enumerated(EnumType.STRING)
+    @Enumerated(EnumType.STRING)
     private Status status = Status.EN_COURS; // Valeur par défaut
     
 
@@ -134,6 +134,14 @@ public class DossierRecouvrement {
 
 public enum Status {
     EN_COURS,  ARCHIVEE
+}
+
+public Status getStatus() {
+    return this.status;
+}
+
+public void setStatus(Status status) {
+    this.status = status;
 }
 
 
