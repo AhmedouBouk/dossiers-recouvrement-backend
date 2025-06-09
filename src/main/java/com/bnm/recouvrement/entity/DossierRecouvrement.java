@@ -88,7 +88,7 @@ public class DossierRecouvrement {
     private Compte compte;
     private LocalDateTime dateCreation;
 
-    @OneToMany(mappedBy = "dossier", cascade = CascadeType.PERSIST)
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
     @JsonIgnore // Empêche la sérialisation JSON récursive
     private List<Comment> commentaires = new ArrayList<>();
 
