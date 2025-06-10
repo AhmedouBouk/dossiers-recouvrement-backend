@@ -1,5 +1,6 @@
 package com.bnm.recouvrement.controller;
 
+import com.bnm.recouvrement.dto.ChequeFileUpdateDto;
 import com.bnm.recouvrement.entity.ChequeFile;
 import com.bnm.recouvrement.service.ChequeService;
 import org.springframework.core.io.Resource;
@@ -68,12 +69,13 @@ public class ChequeController {
 
     @PutMapping("/{chequeFileId}")
     public ResponseEntity<ChequeFile> updateChequeFile(@PathVariable Long chequeFileId,
-                                                     @RequestParam("title") String title,
-                                                     @RequestParam(value = "chequeNumber", required = false) String chequeNumber,
-                                                     @RequestParam(value = "montant", required = false) Double montant,
-                                                     @RequestParam(value = "dateEcheance", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime dateEcheance) {
+                                                     @RequestBody ChequeFileUpdateDto updateDto) {
         try {
-            ChequeFile updatedChequeFile = chequeService.updateChequeFile(chequeFileId, title, chequeNumber, montant, dateEcheance);
+            ChequeFile updatedChequeFile = chequeService.updateChequeFile(chequeFileId, 
+                                                                        updateDto.getTitle(), 
+                                                                        updateDto.getChequeNumber(), 
+                                                                        updateDto.getMontant(), 
+                                                                        updateDto.getDateEcheance());
             return ResponseEntity.ok(updatedChequeFile);
         } catch (RuntimeException e) {
             logger.error("Could not update cheque file with ID {}: {}", chequeFileId, e.getMessage());
@@ -107,24 +109,51 @@ public class ChequeController {
     }
 
     @GetMapping("/download/{chequeFileId}")
-    public ResponseEntity<Resource> downloadChequeFile(@PathVariable Long chequeFileId) {
+    public ResponseEntity<Resource> downloadChequeFile(
+            @PathVariable Long chequeFileId,
+            @RequestParam(value = "download", defaultValue = "false") boolean download) {
         ChequeFile chequeFile = chequeService.getChequeFileById(chequeFileId)
                 .orElseThrow(() -> new RuntimeException("ChequeFile not found with id: " + chequeFileId));
 
         try {
-            Path filePath = FILE_STORAGE_LOCATION.resolve(chequeFile.getFilePath()).normalize();
-            Resource resource = new UrlResource(filePath.toUri());
+            // Extract the filename from the stored path
+            String filePath = chequeFile.getFilePath();
+            String fileName;
+            if (filePath != null && filePath.contains("/")) {
+                fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+            } else {
+                fileName = filePath;
+            }
+            
+            // Resolve the actual file path
+            Path fileLocation = Paths.get("uploads/cheques").resolve(fileName).normalize().toAbsolutePath();
+            Resource resource = new UrlResource(fileLocation.toUri());
 
             if (resource.exists() && resource.isReadable()) {
+                // Determine content type based on file extension
                 String contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
-                // Try to determine content type from file extension if needed, for now generic
+                if (fileName.toLowerCase().endsWith(".pdf")) {
+                    contentType = MediaType.APPLICATION_PDF_VALUE;
+                } else if (fileName.toLowerCase().endsWith(".jpg") || fileName.toLowerCase().endsWith(".jpeg")) {
+                    contentType = MediaType.IMAGE_JPEG_VALUE;
+                } else if (fileName.toLowerCase().endsWith(".png")) {
+                    contentType = MediaType.IMAGE_PNG_VALUE;
+                }
+                
+                // Set content disposition based on download parameter
+                String contentDisposition;
+                if (download) {
+                    contentDisposition = "attachment; filename=\"" + fileName + "\"";
+                } else {
+                    contentDisposition = "inline; filename=\"" + fileName + "\"";
+                }
 
                 return ResponseEntity.ok()
                         .contentType(MediaType.parseMediaType(contentType))
-                        .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + chequeFile.getFilePath() + "\"")
+                        .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition)
                         .body(resource);
             } else {
-                logger.error("File not found or not readable: {}", filePath.toString());
+                logger.error("File not found or not readable: {}", fileLocation.toString());
                 return ResponseEntity.notFound().build();
             }
         } catch (MalformedURLException e) {

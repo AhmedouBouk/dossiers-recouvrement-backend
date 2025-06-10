@@ -115,16 +115,44 @@ public class LcFileController {
     }
 
     @GetMapping("/download/{id}")
-    public ResponseEntity<byte[]> downloadLcFile(@PathVariable Long id) throws IOException {
+    public ResponseEntity<byte[]> downloadLcFile(
+            @PathVariable Long id,
+            @RequestParam(value = "download", defaultValue = "false") boolean download) throws IOException {
         byte[] fileContent = lcFileService.getLcFileContent(id);
         Optional<LcFile> lcFile = lcFileService.getLcFileById(id);
         if (lcFile.isPresent()) {
-            String fileName = lcFile.get().getFilePath() != null ? 
-                lcFile.get().getFilePath().substring(lcFile.get().getFilePath().lastIndexOf('/') + 1) : 
-                "lc_file";
+            // Extract filename from filepath
+            String fileName = "lc_file";
+            if (lcFile.get().getFilePath() != null) {
+                String filePath = lcFile.get().getFilePath();
+                int lastSlashIndex = Math.max(filePath.lastIndexOf('/'), filePath.lastIndexOf('\\'));
+                if (lastSlashIndex >= 0) {
+                    fileName = filePath.substring(lastSlashIndex + 1);
+                } else {
+                    fileName = filePath;
+                }
+            }
+
+            // Determine content type based on file extension
+            MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+            if (fileName.toLowerCase().endsWith(".pdf")) {
+                mediaType = MediaType.APPLICATION_PDF;
+            } else if (fileName.toLowerCase().endsWith(".jpg") || fileName.toLowerCase().endsWith(".jpeg")) {
+                mediaType = MediaType.IMAGE_JPEG;
+            } else if (fileName.toLowerCase().endsWith(".png")) {
+                mediaType = MediaType.IMAGE_PNG;
+            }
+
             HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-            headers.setContentDispositionFormData("attachment", fileName);
+            headers.setContentType(mediaType);
+
+            // Set content disposition based on download parameter
+            if (download) {
+                headers.setContentDispositionFormData("attachment", fileName);
+            } else {
+                headers.add(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + fileName + "\"");
+            }
+
             return new ResponseEntity<>(fileContent, headers, HttpStatus.OK);
         } else {
             return ResponseEntity.notFound().build();
