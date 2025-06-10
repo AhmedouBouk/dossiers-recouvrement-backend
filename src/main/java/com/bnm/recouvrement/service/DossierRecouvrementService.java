@@ -386,15 +386,23 @@ return savedDossier;
 }
 
 
-/* 
+
 @Transactional
-public DossierRecouvrement updateDossierStatus(Long dossierId, String newStatus) {
+public DossierRecouvrement updateDossierStatus(Long dossierId, String newStatusStr) {
     // Récupérer le dossier par son ID
     DossierRecouvrement dossier = dossierRepository.findById(dossierId)
             .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
     
     // Sauvegarder l'ancien statut pour l'historique
-    String oldStatus = dossier.getStatus();
+    DossierRecouvrement.Status oldStatus = dossier.getStatus();
+    
+    // Convertir la chaîne en enum Status
+    DossierRecouvrement.Status newStatus;
+    try {
+        newStatus = DossierRecouvrement.Status.valueOf(newStatusStr);
+    } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("Statut invalide: " + newStatusStr);
+    }
     
     // Mettre à jour le statut
     dossier.setStatus(newStatus);
@@ -416,7 +424,7 @@ public DossierRecouvrement updateDossierStatus(Long dossierId, String newStatus)
     );
     
     return updatedDossier;
-} */ 
+} 
 
 /**
  * Récupère tous les dossiers archivés

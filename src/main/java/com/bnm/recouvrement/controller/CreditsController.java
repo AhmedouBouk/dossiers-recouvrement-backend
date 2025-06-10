@@ -69,7 +69,9 @@ public class CreditsController {
     }
 
     @GetMapping("/download/{id}")
-    public ResponseEntity<ByteArrayResource> downloadCreditFile(@PathVariable Long id) throws IOException {
+    public ResponseEntity<ByteArrayResource> downloadCreditFile(
+            @PathVariable Long id, 
+            @RequestParam(value = "download", defaultValue = "false") boolean download) throws IOException {
         CreditFile creditFile = creditsService.getCreditFileById(id)
                 .orElseThrow(() -> new RuntimeException("CreditFile not found with id: " + id));
 
@@ -77,8 +79,31 @@ public class CreditsController {
         ByteArrayResource resource = new ByteArrayResource(fileContent);
 
         HttpHeaders headers = new HttpHeaders();
-        headers.add(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"credit_file_" + creditFile.getTitle() + "\"");
-        headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+        
+        // Get filename from filepath
+        String filename = "credit_file";
+        if (creditFile.getFilePath() != null) {
+            String[] pathParts = creditFile.getFilePath().split("/");
+            filename = pathParts[pathParts.length - 1];
+        }
+        
+        // Determine content type based on file extension
+        MediaType mediaType = MediaType.APPLICATION_OCTET_STREAM;
+        if (filename.toLowerCase().endsWith(".pdf")) {
+            mediaType = MediaType.APPLICATION_PDF;
+        } else if (filename.toLowerCase().endsWith(".jpg") || filename.toLowerCase().endsWith(".jpeg")) {
+            mediaType = MediaType.IMAGE_JPEG;
+        } else if (filename.toLowerCase().endsWith(".png")) {
+            mediaType = MediaType.IMAGE_PNG;
+        }
+        
+        // Set content disposition based on download parameter
+        String contentDisposition = download ? 
+            "attachment; filename=\"" + filename + "\"" : 
+            "inline; filename=\"" + filename + "\"";
+        
+        headers.add(HttpHeaders.CONTENT_DISPOSITION, contentDisposition);
+        headers.setContentType(mediaType);
         headers.setContentLength(fileContent.length);
 
         return ResponseEntity.ok()
