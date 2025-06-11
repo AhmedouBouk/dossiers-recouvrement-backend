@@ -26,7 +26,7 @@ import com.bnm.recouvrement.service.DossierRecouvrementService;
 
 @CrossOrigin(origins = "http://localhost:4200")
 @RestController
-@RequestMapping("/api/dossiers")
+@RequestMapping("/dossiers")
 public class CommentController {
 
     @Autowired

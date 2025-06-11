@@ -1,7 +1,9 @@
 package com.bnm.recouvrement.service;
 
 import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
+import com.bnm.recouvrement.dao.GarantieRepository;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
+import com.bnm.recouvrement.entity.Garantie;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -12,6 +14,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -19,6 +23,9 @@ public class GarantieService {
 
     @Autowired
     private DossierRecouvrementRepository dossierRepository;
+    
+    @Autowired
+    private GarantieRepository garantieRepository;
 
     @Autowired
     private HistoryService historyService;
@@ -44,9 +51,16 @@ public class GarantieService {
     
         // Enregistrer le chemin relatif du fichier dans la base de données
         String fileUrl = "/garanties/" + fileName; // Chemin relatif
-        dossier.setGarantiesTitre(titre);
-        dossier.setGarantiesFile(fileUrl);
-    
+        
+        // Créer une nouvelle garantie
+        Garantie garantie = new Garantie();
+        garantie.setTitre(titre);
+        garantie.setFilePath(fileUrl);
+        garantie.setUploadDate(LocalDateTime.now());
+        garantie.setDossier(dossier);
+        
+        // Ajouter la garantie au dossier et sauvegarder
+        dossier.getGaranties().add(garantie);
         DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
     
         // Enregistrer l'événement dans l'historique
@@ -64,44 +78,45 @@ public class GarantieService {
     
         return updatedDossier;
     }
-    public DossierRecouvrement updateGarantie(Long id, DossierRecouvrement garantieDetails) {
-        return dossierRepository.findById(id)
-            .map(dossier -> {
-                dossier.setGarantiesTitre(garantieDetails.getGarantiesTitre());
-                dossier.setGarantiesFile(garantieDetails.getGarantiesFile());
-                return dossierRepository.save(dossier);
+    public Garantie updateGarantie(Long garantieId, String nouveauTitre) {
+        return garantieRepository.findById(garantieId)
+            .map(garantie -> {
+                garantie.setTitre(nouveauTitre);
+                return garantieRepository.save(garantie);
             })
-            .orElseThrow(() -> new RuntimeException("Garantie non trouvée avec l'ID : " + id));
+            .orElseThrow(() -> new RuntimeException("Garantie non trouvée avec l'ID : " + garantieId));
     }
-    // Récupérer l'URL du fichier de garantie
-    public String getGarantieFileUrl(Long dossierId) {
-        DossierRecouvrement dossier = dossierRepository.findById(dossierId).orElse(null);
-        if (dossier != null && dossier.getGarantiesFile() != null) {
-            return dossier.getGarantiesFile(); // Retourne le chemin relatif
-        }
-        return null;
+    // Récupérer toutes les garanties d'un dossier
+    public List<Garantie> getGarantiesByDossierId(Long dossierId) {
+        return garantieRepository.findByDossierId(dossierId);
+    }
+    
+    // Récupérer une garantie par son ID
+    public Garantie getGarantieById(Long garantieId) {
+        return garantieRepository.findById(garantieId)
+            .orElseThrow(() -> new RuntimeException("Garantie non trouvée avec l'ID : " + garantieId));
     }
 
-    // Supprimer un fichier de garantie
-    public void deleteGarantieFile(Long dossierId) {
-        DossierRecouvrement dossier = dossierRepository.findById(dossierId)
-                .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
+    // Supprimer une garantie
+    public void deleteGarantie(Long garantieId) {
+        Garantie garantie = garantieRepository.findById(garantieId)
+                .orElseThrow(() -> new RuntimeException("Garantie non trouvée"));
+        
+        Long dossierId = garantie.getDossier().getId();
+        String titre = garantie.getTitre();
 
-        // Supprimer le fichier physique si nécessaire
-        if (dossier.getGarantiesFile() != null) {
-            try {
-                String fileName = dossier.getGarantiesFile().substring(dossier.getGarantiesFile().lastIndexOf('/') + 1);
-                Path filePath = rootLocation.resolve(fileName);
-                Files.deleteIfExists(filePath);
-            } catch (IOException e) {
-                // Logger l'erreur mais continuer le processus
-                System.err.println("Impossible de supprimer le fichier: " + e.getMessage());
-            }
+        // Supprimer le fichier physique
+        try {
+            String fileName = garantie.getFilePath().substring(garantie.getFilePath().lastIndexOf('/') + 1);
+            Path filePath = rootLocation.resolve(fileName);
+            Files.deleteIfExists(filePath);
+        } catch (IOException e) {
+            // Logger l'erreur mais continuer le processus
+            System.err.println("Impossible de supprimer le fichier: " + e.getMessage());
         }
 
-        // Réinitialiser le champ garantiesFile dans la base de données
-        dossier.setGarantiesFile(null);
-        dossierRepository.save(dossier);
+        // Supprimer la garantie de la base de données
+        garantieRepository.deleteById(garantieId);
 
         // Enregistrer l'événement dans l'historique
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
@@ -113,7 +128,55 @@ public class GarantieService {
             "garantie",
             dossierId.toString(),
             "Dossier #" + dossierId,
-            "Suppression du fichier garantie"
+            "Suppression de la garantie '" + titre + "'"
         );
+    }
+    
+    // Supprimer toutes les garanties d'un dossier
+    public void deleteAllGarantiesByDossierId(Long dossierId) {
+        List<Garantie> garanties = garantieRepository.findByDossierId(dossierId);
+        
+        // Supprimer les fichiers physiques
+        for (Garantie garantie : garanties) {
+            try {
+                String fileName = garantie.getFilePath().substring(garantie.getFilePath().lastIndexOf('/') + 1);
+                Path filePath = rootLocation.resolve(fileName);
+                Files.deleteIfExists(filePath);
+            } catch (IOException e) {
+                System.err.println("Impossible de supprimer le fichier: " + e.getMessage());
+            }
+        }
+        
+        // Supprimer toutes les garanties de la base de données
+        garantieRepository.deleteByDossierId(dossierId);
+        
+        // Enregistrer l'événement dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "delete",
+            "garantie",
+            dossierId.toString(),
+            "Dossier #" + dossierId,
+            "Suppression de toutes les garanties"
+        );
+    }
+    
+    // Récupérer le fichier PDF d'une garantie
+    public byte[] getGarantiePdf(Long garantieId) throws IOException {
+        Garantie garantie = garantieRepository.findById(garantieId)
+                .orElseThrow(() -> new RuntimeException("Garantie non trouvée"));
+        
+        String filePath = garantie.getFilePath();
+        if (filePath == null || filePath.isBlank()) {
+            throw new RuntimeException("Fichier non trouvé");
+        }
+        
+        String fileName = filePath.substring(filePath.lastIndexOf('/') + 1);
+        Path path = rootLocation.resolve(fileName);
+        
+        return Files.readAllBytes(path);
     }
 }
