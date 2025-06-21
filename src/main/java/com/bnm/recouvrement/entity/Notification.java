@@ -40,6 +40,12 @@ public class Notification {
     
     @Column(nullable = false)
     private String type; // 'GARANTIE', 'CHEQUE', 'DOCUMENT_DO', etc.
+    
+    @Column(name = "message", length = 1000)
+    private String message;
+    
+    @Column(name = "lien_url")
+    private String lienUrl;
 
     public Notification() {}
     
@@ -114,5 +120,21 @@ public class Notification {
 
     public void setType(String type) {
         this.type = type;
+    }
+    
+    public String getMessage() {
+        return message;
+    }
+    
+    public void setMessage(String message) {
+        this.message = message;
+    }
+    
+    public String getLienUrl() {
+        return lienUrl;
+    }
+    
+    public void setLienUrl(String lienUrl) {
+        this.lienUrl = lienUrl;
     }
 }
