@@ -102,12 +102,13 @@ public class RejetService {
     }
     
     /**
-     * Marque un rejet comme traité
+     * Marque un rejet comme traité et envoie des notifications aux utilisateurs de type Recouvrement
      * @param rejetId ID du rejet
      * @return Le rejet mis à jour
      */
     @Transactional
     public Rejet marquerCommeTraite(Long rejetId) {
+        // Récupérer le rejet
         Rejet rejet = rejetRepository.findById(rejetId)
                 .orElseThrow(() -> new RuntimeException("Rejet non trouvé avec l'ID: " + rejetId));
         
@@ -117,11 +118,18 @@ public class RejetService {
         User currentUser = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Utilisateur connecté non trouvé"));
         
+        // Marquer le rejet comme traité
         rejet.setTraite(true);
-        rejet.setDateTraitement(LocalDateTime.now());
         rejet.setTraitePar(currentUser);
+        rejet.setDateTraitement(LocalDateTime.now());
         
-        return rejetRepository.save(rejet);
+        // Sauvegarder le rejet
+        Rejet rejetMisAJour = rejetRepository.save(rejet);
+        
+        // Envoyer des notifications aux utilisateurs de type Recouvrement
+        envoyerNotificationsTraitement(rejetMisAJour, currentUser.getName());
+        
+        return rejetMisAJour;
     }
     
     /**
@@ -214,5 +222,72 @@ public class RejetService {
         User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
         return rejetRepository.findByUtilisateursNotifiesContainingOrderByDateRejetDesc(user);
+    }
+    
+    /**
+     * Envoie des notifications aux utilisateurs de type Recouvrement lorsqu'un rejet est traité
+     * @param rejet Le rejet traité
+     * @param traitePar Nom de l'utilisateur qui a traité le rejet
+     */
+    private void envoyerNotificationsTraitement(Rejet rejet, String traitePar) {
+        // Récupérer le numéro du dossier
+        Long dossierId = rejet.getDossier().getId();
+        
+        // Préparer les données de la notification
+        String titre = "Traitement de rejet - Dossier #" + dossierId;
+        String message = "Le rejet du dossier #" + dossierId + " a été traité";
+        String contenu = "Le rejet du dossier #" + dossierId + " a été traité par " + traitePar + ".\n\n" +
+                      "Motif initial du rejet: " + rejet.getMotif();
+        String lienUrl = "/dossiers/" + dossierId;
+        
+        // Récupérer tous les utilisateurs de type Recouvrement
+        List<User> recouvrementUsers = userRepository.findByUserType("Recouvrement");
+        
+        if (recouvrementUsers.isEmpty()) {
+            System.out.println("Aucun utilisateur de type Recouvrement trouvé pour envoyer la notification de traitement.");
+            return;
+        }
+        
+        System.out.println("Envoi de notification de traitement de rejet à " + recouvrementUsers.size() + " utilisateurs de type Recouvrement");
+        
+        // Envoyer des notifications à chaque utilisateur de type Recouvrement
+        for (User user : recouvrementUsers) {
+            try {
+                // Construire le contenu de l'email
+                StringBuilder emailContent = new StringBuilder();
+                emailContent.append("<html><body>");
+                emailContent.append("<h2>").append(titre).append("</h2>");
+                emailContent.append("<p>").append(contenu.replace("\n", "<br>")).append("</p>");
+                
+                emailContent.append("<p><a href='http://localhost:4200").append(lienUrl)
+                        .append("' style='background-color: #4CAF50; color: white; padding: 10px 15px; text-align: center; ")
+                        .append("text-decoration: none; display: inline-block; border-radius: 5px;'>")
+                        .append("Voir les détails</a></p>");
+                
+                emailContent.append("<p>Cordialement,<br>Le système de gestion des recouvrements BNM</p>");
+                emailContent.append("</body></html>");
+                
+                // Envoyer l'email
+                emailService.sendEmail(user.getEmail(), titre, emailContent.toString(), true);
+                System.out.println("Email de notification de traitement envoyé à " + user.getEmail());
+                
+                // Créer et sauvegarder une notification
+                Notification notification = new Notification();
+                notification.setUser(user);
+                notification.setMessage(message);
+                notification.setType("TRAITEMENT_REJET");
+                notification.setLu(false);
+                notification.setLienUrl(lienUrl);
+                notification.setTitre(titre);
+                notification.setContenu(contenu);
+                notification.setDossier(rejet.getDossier());
+                
+                notificationRepository.save(notification);
+                
+            } catch (MessagingException e) {
+                System.err.println("Erreur lors de l'envoi d'email de traitement à " + user.getEmail() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 }

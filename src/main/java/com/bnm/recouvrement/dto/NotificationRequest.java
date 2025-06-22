@@ -9,6 +9,8 @@ public class NotificationRequest {
     private Long destinataireId;
     private String destinataireRole;
     private String lienUrl;
+    private String titre;
+    private String contenu;
 
     // Constructeurs
     public NotificationRequest() {
@@ -18,6 +20,14 @@ public class NotificationRequest {
         this.message = message;
         this.type = type;
         this.lienUrl = lienUrl;
+    }
+    
+    public NotificationRequest(String message, String type, String lienUrl, String titre, String contenu) {
+        this.message = message;
+        this.type = type;
+        this.lienUrl = lienUrl;
+        this.titre = titre;
+        this.contenu = contenu;
     }
 
     // Getters et Setters
@@ -59,5 +69,21 @@ public class NotificationRequest {
 
     public void setLienUrl(String lienUrl) {
         this.lienUrl = lienUrl;
+    }
+    
+    public String getTitre() {
+        return titre;
+    }
+    
+    public void setTitre(String titre) {
+        this.titre = titre;
+    }
+    
+    public String getContenu() {
+        return contenu;
+    }
+    
+    public void setContenu(String contenu) {
+        this.contenu = contenu;
     }
 }
