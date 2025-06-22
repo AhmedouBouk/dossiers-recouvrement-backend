@@ -133,7 +133,16 @@ public class DossierRecouvrement {
     
 
 public enum Status {
-    EN_COURS,  ARCHIVEE
+    EN_COURS,  ARCHIVEE,
+    CLIENT_RELANCE,
+    PROTOCOLE_SIGNE,
+    RECOUVREMENT_AMIABLE,
+    EN_JUSTICE,
+    JUGEMENT_RENDU,
+    ADJUDICATION_EN_COURS,
+    CLOTURE,
+    ARCHIVE,
+    REJETE
 }
 
 public Status getStatus() {
