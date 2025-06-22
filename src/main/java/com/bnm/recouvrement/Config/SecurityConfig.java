@@ -8,6 +8,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -17,6 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
+@EnableMethodSecurity
 public class SecurityConfig {
 
     private final JwtAutentificationFilter jwtAutentificationFilter;
@@ -74,6 +76,15 @@ public class SecurityConfig {
     
                 // DASHBOARD - Read-only access to dashboard statistics
                 .requestMatchers("/dashboard/**").permitAll()
+
+                // USERS - Permettre l'accès aux endpoints utilisateurs pour le workflow de rejet
+                .requestMatchers("/users/**").permitAll()
+                .requestMatchers("/users/types").permitAll()
+                .requestMatchers("/users/type/**").permitAll()
+
+                // REJETS - Permettre l'accès aux endpoints de rejet pour le workflow multi-étapes
+                .requestMatchers("/api/rejets/**").permitAll()
+                .requestMatchers("/rejets/**").permitAll()
     
                 // Require authentication for all other requests
                 .anyRequest().authenticated()

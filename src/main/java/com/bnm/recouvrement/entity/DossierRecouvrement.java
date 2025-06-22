@@ -5,6 +5,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
@@ -32,13 +33,16 @@ public class DossierRecouvrement {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "account_number", nullable = false)
+    private String accountNumber;
+
     private Double engagementTotal;
     private Double montantPrincipal;
     private Double interetContractuel;
     private Double interetRetard;
 
  
-    @Column(name = "nature")
+    @Column(name = "nature" ,columnDefinition = "TEXT")
     private String naturesEngagement; // credit, debit, cautions
 
     private String agenceOuvertureCompte;
@@ -49,18 +53,35 @@ public class DossierRecouvrement {
     private Double provision;
     private Double interetsReserves;
 
-    private String status;
+    @Enumerated(EnumType.STRING)
+    private Status status = Status.EN_COURS; // Valeur par défaut
+    
 
     @Enumerated(EnumType.STRING)
     private EtatValidation etatValidation = EtatValidation.INITIALE;
 
-    private String garantiesTitre;
     private String garantiesValeur;
-    private String garantiesFile; // PDF file path
+    
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<Garantie> garanties = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<ChequeFile> chequeFiles = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<CautionFile> cautionFiles = new ArrayList<>();
+    
+    @OneToMany(mappedBy = "dossier", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<CreditFile> creditFiles = new ArrayList<>();
+    
     private String creditsFile; // PDF file path
     private String cautionsFile; // PDF file path
     private String lcFile; // PDF file path
-    private String chequeFile; // PDF file path
+    private String chequeFile; // PDF file path (legacy - kept for backward compatibility)
 
     @ManyToOne
     @JoinColumn(name = "compte_id")
@@ -71,9 +92,36 @@ public class DossierRecouvrement {
     @JsonIgnore // Empêche la sérialisation JSON récursive
     private List<Comment> commentaires = new ArrayList<>();
 
- 
+    @OneToMany(mappedBy = "dossierRecouvrement", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
+    private List<LcFile> lcFiles = new ArrayList<>();
 
-   
+    @Column(name = "date_archivage")
+    private LocalDateTime dateArchivage;
+
+    public LocalDateTime getDateArchivage() {
+        return dateArchivage;
+    }
+
+    public void setDateArchivage(LocalDateTime dateArchivage) {
+        this.dateArchivage = dateArchivage;
+    }
+
+    public List<CautionFile> getCautionFiles() {
+        return cautionFiles;
+    }
+
+    public void setCautionFiles(List<CautionFile> cautionFiles) {
+        this.cautionFiles = cautionFiles;
+    }
+
+    public List<LcFile> getLcFiles() {
+        return lcFiles;
+    }
+
+    public void setLcFiles(List<LcFile> lcFiles) {
+        this.lcFiles = lcFiles;
+    }
 
     public enum EtatValidation {
         INITIALE,
@@ -83,4 +131,18 @@ public class DossierRecouvrement {
         NON_VALIDE
     }
     
+
+public enum Status {
+    EN_COURS,  ARCHIVEE
+}
+
+public Status getStatus() {
+    return this.status;
+}
+
+public void setStatus(Status status) {
+    this.status = status;
+}
+
+
 }

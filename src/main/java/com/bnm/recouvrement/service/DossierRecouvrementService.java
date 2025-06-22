@@ -8,6 +8,28 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import com.bnm.recouvrement.entity.DossierRecouvrement;
+import com.bnm.recouvrement.entity.DossierRecouvrement;
+
+import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
+
+
+import java.io.ByteArrayOutputStream;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.pdf.PdfWriter;
+
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+
+import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
+import com.bnm.recouvrement.service.NotificationService;
+
+import java.io.ByteArrayOutputStream;
+import com.itextpdf.text.Document;
+import com.itextpdf.text.pdf.PdfCopy;
+import com.itextpdf.text.pdf.PdfReader;
+import com.itextpdf.text.pdf.PdfWriter;
 
 import com.itextpdf.text.Document;
 import com.itextpdf.text.DocumentException;
@@ -30,6 +52,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import java.io.File;
 
 import java.io.IOException;
+import java.nio.file.Files;
+
 import org.springframework.transaction.annotation.Transactional;
 
 import com.bnm.recouvrement.dao.CompteRepository;
@@ -78,16 +102,13 @@ public class DossierRecouvrementService {
             "Dossier #" + dossier.getId()
         );
         
-        // Vérifier si le dossier nécessite un fichier de garantie
-        if (dossier.getGarantiesValeur() != null && !dossier.getGarantiesValeur().isEmpty() 
-                && dossier.getGarantiesFile() == null) {
+        // Vérifier si le dossier a des garanties
+        if (dossier.getGaranties() == null || dossier.getGaranties().isEmpty()) {
             System.out.println("Condition remplie pour envoyer une notification de garantie pour le dossier #" + dossier.getId());
             // Envoyer notification pour le téléchargement de garantie
             notificationService.notifyGarantieUploadRequired(dossier);
         } else {
-            System.out.println("Condition NON remplie pour envoyer une notification de garantie pour le dossier #" + dossier.getId());
-            System.out.println("- Garanties Valeur: " + (dossier.getGarantiesValeur() != null ? dossier.getGarantiesValeur() : "null"));
-            System.out.println("- Garanties File: " + (dossier.getGarantiesFile() != null ? dossier.getGarantiesFile() : "null"));
+            System.out.println("Le dossier #" + dossier.getId() + " a déjà " + dossier.getGaranties().size() + " garantie(s)");
         }
         
         // Vérifier si le dossier a une référence de chèque
@@ -123,9 +144,22 @@ public class DossierRecouvrementService {
 
     @Transactional
     public DossierRecouvrement updateDossier(Long id, DossierRecouvrement dossier) {
-        if (!dossierRepository.existsById(id)) {
-            throw new IllegalArgumentException("Dossier non trouvé avec l'ID: " + id);
+        // Récupérer le dossier existant pour préserver les données non modifiées
+        DossierRecouvrement existingDossier = dossierRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Dossier non trouvé avec l'ID: " + id));
+        
+        // Préserver les commentaires existants si non fournis dans la mise à jour
+        if (dossier.getCommentaires() == null || dossier.getCommentaires().isEmpty()) {
+            dossier.setCommentaires(existingDossier.getCommentaires());
         }
+        
+        // Préserver d'autres champs importants si nécessaire
+        // Par exemple, si les garanties ne sont pas incluses dans la mise à jour
+        if (dossier.getGaranties() == null || dossier.getGaranties().isEmpty()) {
+            dossier.setGaranties(existingDossier.getGaranties());
+        }
+        
+        // Assigner l'ID et sauvegarder
         dossier.setId(id);
         DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
         
@@ -217,6 +251,7 @@ notificationRepository.deleteByDossierId(id);
     
                 // Remplir les champs du dossier
                 dossier.setCompte(compteOpt.get());
+                dossier.setAccountNumber(compteOpt.get().getNomCompte()); // Set the account number
                 dossier.setEngagementTotal(data[3] != null && !data[3].trim().isEmpty() ? parseDoubleOrNull(data[3]) : null);
                 dossier.setMontantPrincipal(data[4] != null && !data[4].trim().isEmpty() ? parseDoubleOrNull(data[4]) : null);
                 dossier.setInteretContractuel(data[5] != null && !data[5].trim().isEmpty() ? parseDoubleOrNull(data[5]) : null);
@@ -238,7 +273,7 @@ notificationRepository.deleteByDossierId(id);
                 // Vérifier si le dossier nécessite un fichier de garantie
                // Vérifier si le dossier nécessite un fichier de garantie
                if (dossier.getGarantiesValeur() != null && !dossier.getGarantiesValeur().isEmpty() 
-               && dossier.getGarantiesFile() == null) {
+               && (dossier.getGaranties() == null || dossier.getGaranties().isEmpty())) {
            System.out.println("Dossier #" + dossier.getId() + " nécessite une garantie - Préparation de notification");
            dossiersRequiringGaranties.add(dossier);
        }
@@ -363,20 +398,24 @@ historyService.createEvent(
 return savedDossier;
 }
 
-/**
- * Met à jour le statut d'un dossier et enregistre l'événement dans l'historique
- * @param dossierId ID du dossier à mettre à jour
- * @param newStatus Nouveau statut du dossier
- * @return Le dossier mis à jour
- */
+
+
 @Transactional
-public DossierRecouvrement updateDossierStatus(Long dossierId, String newStatus) {
+public DossierRecouvrement updateDossierStatus(Long dossierId, String newStatusStr) {
     // Récupérer le dossier par son ID
     DossierRecouvrement dossier = dossierRepository.findById(dossierId)
             .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
     
     // Sauvegarder l'ancien statut pour l'historique
-    String oldStatus = dossier.getStatus();
+    DossierRecouvrement.Status oldStatus = dossier.getStatus();
+    
+    // Convertir la chaîne en enum Status
+    DossierRecouvrement.Status newStatus;
+    try {
+        newStatus = DossierRecouvrement.Status.valueOf(newStatusStr);
+    } catch (IllegalArgumentException e) {
+        throw new IllegalArgumentException("Statut invalide: " + newStatusStr);
+    }
     
     // Mettre à jour le statut
     dossier.setStatus(newStatus);
@@ -398,6 +437,141 @@ public DossierRecouvrement updateDossierStatus(Long dossierId, String newStatus)
     );
     
     return updatedDossier;
+} 
+
+/**
+ * Récupère tous les dossiers archivés
+ */
+
+/**
+ * Vérifie si un dossier est archivé
+ */
+
+/**
+ * Archive un dossier : change uniquement le statut
+ * @param dossierId ID du dossier à archiver
+ * @return Le dossier archivé
+ */
+@Transactional
+public DossierRecouvrement archiverDossier(Long dossierId) {
+    // Récupérer le dossier
+    DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+            .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
+    
+    // Vérifier que le dossier n'est pas déjà archivé
+    if (DossierRecouvrement.Status.ARCHIVEE.equals(dossier.getStatus())) {
+        throw new IllegalStateException("Le dossier est déjà archivé");
+    }
+    
+    // Sauvegarder l'ancien statut pour l'historique
+    DossierRecouvrement.Status oldStatus = dossier.getStatus();
+    
+    try {
+        // Mettre à jour le statut et la date d'archivage
+        dossier.setStatus(DossierRecouvrement.Status.ARCHIVEE);
+        dossier.setDateArchivage(LocalDateTime.now());
+       
+        // Sauvegarder le dossier
+        DossierRecouvrement archivedDossier = dossierRepository.save(dossier);
+        
+        // Enregistrer dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "archive", 
+            "dossier", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Archivage du dossier - statut: " + (oldStatus != null ? oldStatus : "INITIALE") + " → ARCHIVEE"
+        );
+        
+        return archivedDossier;
+        
+    } catch (Exception e) {
+        throw new RuntimeException("Erreur lors de l'archivage du dossier : " + e.getMessage(), e);
+    }
 }
 
+
+
+
+
+
+
+
+
+
+
+
+
+/**
+ * Récupère tous les dossiers NON archivés (pour la liste principale)
+ */
+// Liste des dossiers NON archivés
+public List<DossierRecouvrement> getDossiersActifs() {
+    return dossierRepository.findByStatusNot(DossierRecouvrement.Status.ARCHIVEE);
 }
+
+// Liste des dossiers archivés
+public List<DossierRecouvrement> getDossiersArchives() {
+    return dossierRepository.findByStatus(DossierRecouvrement.Status.ARCHIVEE);
+}
+
+
+/**
+ * Vérifie si un dossier est archivé
+ */
+public boolean isDossierArchive(Long dossierId) {
+    return dossierRepository.findById(dossierId)
+            .map(dossier -> DossierRecouvrement.Status.ARCHIVEE.equals(dossier.getStatus()))
+            .orElse(false);
+}
+
+/**
+ * Désarchive un dossier
+ */
+@Transactional
+public DossierRecouvrement desarchiverDossier(Long dossierId) {
+    DossierRecouvrement dossier = dossierRepository.findById(dossierId)
+            .orElseThrow(() -> new RuntimeException("Dossier non trouvé avec l'ID : " + dossierId));
+    
+    if (!DossierRecouvrement.Status.ARCHIVEE.equals(dossier.getStatus())) {
+        throw new IllegalStateException("Le dossier n'est pas archivé");
+    }
+    
+    try {
+        // Remettre le statut à COMPLET (ou un autre statut par défaut)
+        dossier.setStatus(DossierRecouvrement.Status.EN_COURS);
+        dossier.setDateArchivage(null);
+        
+        DossierRecouvrement restoredDossier = dossierRepository.save(dossier);
+        
+        // Enregistrer dans l'historique
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        String username = auth.getName();
+        
+        historyService.createEvent(
+            username,
+            "unarchive", 
+            "dossier", 
+            dossierId.toString(), 
+            "Dossier #" + dossierId,
+            "Désarchivage du dossier - statut: ARCHIVEE → COMPLET"
+        );
+        
+        return restoredDossier;
+        
+    } catch (Exception e) {
+        throw new RuntimeException("Erreur lors du désarchivage : " + e.getMessage(), e);
+    }
+}
+
+
+/**
+ * Compte le nombre de dossiers archivés
+ */
+public long countDossiersArchives() {
+    return dossierRepository.countByStatus(DossierRecouvrement.Status.ARCHIVEE);
+}}

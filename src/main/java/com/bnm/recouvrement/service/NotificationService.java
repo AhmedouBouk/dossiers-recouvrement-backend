@@ -1,7 +1,8 @@
 package com.bnm.recouvrement.service;
 
 import com.bnm.recouvrement.dao.AgenceRepository;
-import com.bnm.recouvrement.repository.*;
+import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
+import com.bnm.recouvrement.repository.NotificationRepository;
 import com.bnm.recouvrement.dao.UserRepository;
 import com.bnm.recouvrement.entity.Agence;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
@@ -30,6 +31,9 @@ public class NotificationService {
     
     @Autowired
     private NotificationRepository notificationRepository;
+    
+    @Autowired
+    private DossierRecouvrementRepository dossierRecouvrementRepository;
     
     public void notifyGarantieUploadRequired(DossierRecouvrement dossier) {
         System.out.println("Tentative d'envoi de notification pour le dossier #" + dossier.getId());
@@ -341,5 +345,144 @@ public class NotificationService {
         emailContent.append("</body></html>");
         
         return emailContent.toString();
+    }
+
+    // New method for rejection notifications
+    public void sendRejectionNotification(Long dossierId, String reason, List<String> userTypes) {
+        Optional<DossierRecouvrement> dossierOpt = dossierRecouvrementRepository.findById(dossierId);
+        if (dossierOpt.isEmpty()) {
+            System.err.println("Dossier not found for rejection notification: #" + dossierId);
+            return;
+        }
+        DossierRecouvrement dossier = dossierOpt.get();
+
+        String subject = "Dossier de recouvrement refusé: #" + dossier.getId();
+        String notificationTitle = "Dossier refusé: #" + dossier.getId();
+        String notificationContent = "Le dossier #" + dossier.getId() + " a été refusé. Motif: " + reason;
+
+        List<User> usersToNotify = new ArrayList<>();
+        for (String userType : userTypes) {
+            usersToNotify.addAll(userRepository.findByUserType(userType));
+        }
+
+        if (usersToNotify.isEmpty()) {
+            System.out.println("Aucun utilisateur trouvé pour envoyer la notification de refus pour le dossier #" + dossierId);
+            return;
+        }
+
+        for (User user : usersToNotify) {
+            try {
+                emailService.sendEmail(user.getEmail(), subject, buildRejectionEmail(dossier, reason), true);
+                Notification notification = new Notification(
+                    user,
+                    dossier,
+                    notificationTitle,
+                    notificationContent,
+                    "REFUS_DOSSIER"
+                );
+                notificationRepository.save(notification);
+                System.out.println("Notification de refus envoyée à " + user.getEmail() + " pour le dossier #" + dossier.getId());
+            } catch (MessagingException e) {
+                System.err.println("Erreur lors de l'envoi de la notification de refus à " + user.getEmail() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private String buildRejectionEmail(DossierRecouvrement dossier, String reason) {
+        StringBuilder emailContent = new StringBuilder();
+        emailContent.append("<html><body>");
+        emailContent.append("<h2>Dossier de recouvrement refusé</h2>");
+        emailContent.append("<p>Le dossier de recouvrement suivant a été refusé:</p>");
+        emailContent.append("<h3>Détails du dossier:</h3>");
+        emailContent.append("<ul>");
+        emailContent.append("<li><b>Numéro de dossier:</b> ").append(dossier.getId()).append("</li>");
+        if (dossier.getCompte() != null) {
+            emailContent.append("<li><b>Compte:</b> ").append(dossier.getCompte().getNomCompte()).append("</li>");
+            if (dossier.getCompte().getClient() != null) {
+                emailContent.append("<li><b>Client:</b> ").append(dossier.getCompte().getClient().getNom())
+                        .append(" ").append(dossier.getCompte().getClient().getPrenom()).append("</li>");
+            }
+        }
+        emailContent.append("<li><b>Motif du refus:</b> ").append(reason).append("</li>");
+        emailContent.append("</ul>");
+        emailContent.append("<p>Veuillez vous connecter à l'application pour consulter les détails.</p>");
+        emailContent.append("<a href='http://localhost:4200/dossiers/").append(dossier.getId())
+                .append("' style='background-color: #f44336; color: white; padding: 10px 15px; text-align: center; ")
+                .append("text-decoration: none; display: inline-block; border-radius: 5px;'>")
+                .append("Accéder au dossier</a>");
+        emailContent.append("<p>Cordialement,<br>Le système de gestion des recouvrements BNM</p>");
+        emailContent.append("</body></html>");
+        return emailContent.toString();
+    }
+    
+    /**
+     * Envoie une notification à tous les utilisateurs ayant un rôle spécifique
+     * @param message Le message de la notification
+     * @param role Le rôle des destinataires (ex: ROLE_RECOUVREMENT)
+     * @param type Le type de notification
+     * @param lienUrl Lien optionnel vers une ressource
+     * @return La liste des notifications créées
+     */
+    public List<Notification> sendNotificationToRole(String message, String role, String type, String lienUrl) {
+        System.out.println("Envoi de notification à tous les utilisateurs avec le rôle: " + role);
+        
+        // Récupérer tous les utilisateurs ayant le rôle spécifié
+        List<User> usersWithRole = userRepository.findByRoles_Name(role);
+        
+        System.out.println("Utilisateurs avec le rôle " + role + ": " + usersWithRole.size());
+        for (User user : usersWithRole) {
+            System.out.println("- Utilisateur éligible: " + user.getEmail() + " (ID: " + user.getId() + ")");
+        }
+        
+        if (usersWithRole.isEmpty()) {
+            System.out.println("Aucun utilisateur trouvé avec le rôle: " + role);
+            return new ArrayList<>();
+        }
+        
+        String subject = "Notification: " + message;
+        
+        List<Notification> notifications = new ArrayList<>();
+        
+        // Envoyer l'email à chaque utilisateur concerné et créer une notification
+        for (User user : usersWithRole) {
+            try {
+                // Construire le contenu de l'email
+                StringBuilder emailContent = new StringBuilder();
+                emailContent.append("<html><body>");
+                emailContent.append("<h2>Notification du système</h2>");
+                emailContent.append("<p>").append(message).append("</p>");
+                
+                if (lienUrl != null && !lienUrl.isEmpty()) {
+                    emailContent.append("<p><a href='http://localhost:4200").append(lienUrl)
+                            .append("' style='background-color: #4CAF50; color: white; padding: 10px 15px; text-align: center; ")
+                            .append("text-decoration: none; display: inline-block; border-radius: 5px;'>")
+                            .append("Voir les détails</a></p>");
+                }
+                
+                emailContent.append("<p>Cordialement,<br>Le système de gestion des recouvrements BNM</p>");
+                emailContent.append("</body></html>");
+                
+                // Envoyer l'email
+                emailService.sendEmail(user.getEmail(), subject, emailContent.toString(), true);
+                System.out.println("Email de notification envoyé à " + user.getEmail());
+                
+                // Créer et sauvegarder une notification
+                Notification notification = new Notification();
+                notification.setUser(user);
+                notification.setMessage(message);
+                notification.setType(type != null ? type : "SYSTEME");
+                notification.setLu(false);
+                notification.setLienUrl(lienUrl);
+                
+                notifications.add(notificationRepository.save(notification));
+                
+            } catch (MessagingException e) {
+                System.err.println("Erreur lors de l'envoi d'email à " + user.getEmail() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        
+        return notifications;
     }
 }
