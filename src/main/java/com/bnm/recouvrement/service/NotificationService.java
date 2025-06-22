@@ -422,9 +422,11 @@ public class NotificationService {
      * @param role Le rôle des destinataires (ex: ROLE_RECOUVREMENT)
      * @param type Le type de notification
      * @param lienUrl Lien optionnel vers une ressource
+     * @param titre Titre optionnel de la notification
+     * @param contenu Contenu détaillé optionnel de la notification
      * @return La liste des notifications créées
      */
-    public List<Notification> sendNotificationToRole(String message, String role, String type, String lienUrl) {
+    public List<Notification> sendNotificationToRole(String message, String role, String type, String lienUrl, String titre, String contenu) {
         System.out.println("Envoi de notification à tous les utilisateurs avec le rôle: " + role);
         
         // Récupérer tous les utilisateurs ayant le rôle spécifié
@@ -440,7 +442,7 @@ public class NotificationService {
             return new ArrayList<>();
         }
         
-        String subject = "Notification: " + message;
+        String subject = titre != null ? titre : "Notification: " + message;
         
         List<Notification> notifications = new ArrayList<>();
         
@@ -450,8 +452,13 @@ public class NotificationService {
                 // Construire le contenu de l'email
                 StringBuilder emailContent = new StringBuilder();
                 emailContent.append("<html><body>");
-                emailContent.append("<h2>Notification du système</h2>");
-                emailContent.append("<p>").append(message).append("</p>");
+                emailContent.append("<h2>").append(subject).append("</h2>");
+                
+                if (contenu != null && !contenu.isEmpty()) {
+                    emailContent.append("<p>").append(contenu).append("</p>");
+                } else {
+                    emailContent.append("<p>").append(message).append("</p>");
+                }
                 
                 if (lienUrl != null && !lienUrl.isEmpty()) {
                     emailContent.append("<p><a href='http://localhost:4200").append(lienUrl)
@@ -474,6 +481,101 @@ public class NotificationService {
                 notification.setType(type != null ? type : "SYSTEME");
                 notification.setLu(false);
                 notification.setLienUrl(lienUrl);
+                
+                // Ajouter les nouveaux champs s'ils sont fournis
+                if (titre != null && !titre.isEmpty()) {
+                    notification.setTitre(titre);
+                }
+                
+                if (contenu != null && !contenu.isEmpty()) {
+                    notification.setContenu(contenu);
+                }
+                
+                notifications.add(notificationRepository.save(notification));
+                
+            } catch (MessagingException e) {
+                System.err.println("Erreur lors de l'envoi d'email à " + user.getEmail() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        
+        return notifications;
+    }
+    
+    /**
+     * Envoie une notification à tous les utilisateurs d'un type spécifique
+     * @param message Le message de la notification
+     * @param userType Le type des utilisateurs (ex: Recouvrement)
+     * @param type Le type de notification
+     * @param lienUrl Lien optionnel vers une ressource
+     * @param titre Titre optionnel de la notification
+     * @param contenu Contenu détaillé optionnel de la notification
+     * @return La liste des notifications créées
+     */
+    public List<Notification> sendNotificationToUserType(String message, String userType, String type, String lienUrl, String titre, String contenu) {
+        System.out.println("Envoi de notification à tous les utilisateurs de type: " + userType);
+        
+        // Récupérer tous les utilisateurs du type spécifié
+        List<User> usersWithType = userRepository.findByUserType(userType);
+        
+        System.out.println("Utilisateurs de type " + userType + ": " + usersWithType.size());
+        for (User user : usersWithType) {
+            System.out.println("- Utilisateur éligible: " + user.getEmail() + " (ID: " + user.getId() + ")");
+        }
+        
+        if (usersWithType.isEmpty()) {
+            System.out.println("Aucun utilisateur trouvé de type: " + userType);
+            return new ArrayList<>();
+        }
+        
+        String subject = titre != null ? titre : "Notification: " + message;
+        
+        List<Notification> notifications = new ArrayList<>();
+        
+        // Envoyer l'email à chaque utilisateur concerné et créer une notification
+        for (User user : usersWithType) {
+            try {
+                // Construire le contenu de l'email
+                StringBuilder emailContent = new StringBuilder();
+                emailContent.append("<html><body>");
+                emailContent.append("<h2>").append(subject).append("</h2>");
+                
+                if (contenu != null && !contenu.isEmpty()) {
+                    emailContent.append("<p>").append(contenu).append("</p>");
+                } else {
+                    emailContent.append("<p>").append(message).append("</p>");
+                }
+                
+                if (lienUrl != null && !lienUrl.isEmpty()) {
+                    emailContent.append("<p><a href='http://localhost:4200").append(lienUrl)
+                            .append("' style='background-color: #4CAF50; color: white; padding: 10px 15px; text-align: center; ")
+                            .append("text-decoration: none; display: inline-block; border-radius: 5px;'>")
+                            .append("Voir les détails</a></p>");
+                }
+                
+                emailContent.append("<p>Cordialement,<br>Le système de gestion des recouvrements BNM</p>");
+                emailContent.append("</body></html>");
+                
+                // Envoyer l'email
+                emailService.sendEmail(user.getEmail(), subject, emailContent.toString(), true);
+                System.out.println("Email de notification envoyé à " + user.getEmail());
+                
+                // Créer et sauvegarder une notification
+                Notification notification = new Notification();
+                notification.setUser(user);
+                notification.setMessage(message);
+                notification.setType(type != null ? type : "SYSTEME");
+                notification.setLu(false);
+                notification.setLienUrl(lienUrl);
+                
+                // Ajouter les nouveaux champs s'ils sont fournis
+                if (titre != null && !titre.isEmpty()) {
+                    notification.setTitre(titre);
+                }
+                
+                if (contenu != null && !contenu.isEmpty()) {
+                    notification.setContenu(contenu);
+                }
                 
                 notifications.add(notificationRepository.save(notification));
                 

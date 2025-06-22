@@ -92,7 +92,7 @@ public class NotificationController {
      * @return La liste des notifications créées
      */
     @PostMapping("/role/{role}")
-    @PreAuthorize("isAuthenticated()")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<Notification>> notifyByRole(
             @PathVariable String role,
             @RequestBody NotificationRequest request) {
@@ -101,11 +101,44 @@ public class NotificationController {
                     request.getMessage(),
                     role,
                     request.getType(),
-                    request.getLienUrl()
+                    request.getLienUrl(),
+                    request.getTitre(),
+                    request.getContenu()
             );
             return ResponseEntity.ok(notifications);
         } catch (Exception e) {
             System.err.println("Erreur lors de l'envoi de notifications par rôle: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.status(500).build();
+        }
+    }
+    
+    // Cette méthode a été fusionnée avec notifyByRole pour éviter les mappings ambigus
+    
+    /**
+     * Envoie une notification à tous les utilisateurs d'un type spécifique
+     * @param userType Le type d'utilisateur cible (ex: Recouvrement)
+     * @param notificationRequest Les données de la notification
+     * @return La liste des notifications créées
+     */
+    @PostMapping("/type/{userType}")
+    @PreAuthorize("hasRole('ADMIN') or hasRole('RECOUVREMENT')")
+    public ResponseEntity<List<Notification>> sendNotificationToUserType(
+            @PathVariable String userType,
+            @RequestBody NotificationRequest notificationRequest) {
+        
+        try {
+            List<Notification> notifications = notificationService.sendNotificationToUserType(
+                    notificationRequest.getMessage(),
+                    userType,
+                    notificationRequest.getType(),
+                    notificationRequest.getLienUrl(),
+                    notificationRequest.getTitre(),
+                    notificationRequest.getContenu());
+            
+            return ResponseEntity.ok(notifications);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'envoi de notification par type: " + e.getMessage());
             e.printStackTrace();
             return ResponseEntity.status(500).build();
         }
