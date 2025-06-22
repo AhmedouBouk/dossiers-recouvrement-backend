@@ -204,4 +204,15 @@ public class RejetService {
     public List<Rejet> getAllRejets() {
         return rejetRepository.findAll();
     }
+    
+    /**
+     * Récupère tous les rejets où l'utilisateur connecté est notifié
+     * @param email Email de l'utilisateur connecté
+     * @return Liste des rejets pour cet utilisateur
+     */
+    public List<Rejet> getRejetsPourUtilisateurConnecte(String email) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("Utilisateur non trouvé"));
+        return rejetRepository.findByUtilisateursNotifiesContainingOrderByDateRejetDesc(user);
+    }
 }
