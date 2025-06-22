@@ -5,18 +5,18 @@ import com.bnm.recouvrement.entity.User;
 import com.bnm.recouvrement.service.AdminService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
-@PreAuthorize("hasAnyRole('ADMIN', 'AGENCE')")
 public class UserController {
     private final AdminService adminService;
 
@@ -85,5 +85,32 @@ public class UserController {
         String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
         Pattern pattern = Pattern.compile(emailRegex);
         return pattern.matcher(email).matches();
+    }
+    
+    /**
+     * Récupère tous les utilisateurs
+     */
+    @GetMapping
+    public ResponseEntity<List<User>> getAllUsers() {
+        return ResponseEntity.ok(adminService.getAllUsers());
+    }
+    
+    /**
+     * Récupère les utilisateurs par type
+     * @param userType Le type d'utilisateur
+     */
+    @GetMapping("/type/{userType}")
+    public ResponseEntity<List<User>> getUsersByType(@PathVariable String userType) {
+        return ResponseEntity.ok(adminService.getUsersByType(userType));
+    }
+    
+    /**
+     * Récupère les utilisateurs par types (plusieurs types)
+     * @param types Les types d'utilisateurs séparés par virgule
+     */
+    @GetMapping("/types")
+    public ResponseEntity<List<User>> getUsersByTypes(@RequestParam String types) {
+        List<String> typesList = Arrays.asList(types.split(","));
+        return ResponseEntity.ok(adminService.getUsersByTypes(typesList));
     }
 }

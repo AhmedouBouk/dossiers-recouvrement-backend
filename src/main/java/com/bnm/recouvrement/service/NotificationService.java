@@ -415,4 +415,74 @@ public class NotificationService {
         emailContent.append("</body></html>");
         return emailContent.toString();
     }
+    
+    /**
+     * Envoie une notification à tous les utilisateurs ayant un rôle spécifique
+     * @param message Le message de la notification
+     * @param role Le rôle des destinataires (ex: ROLE_RECOUVREMENT)
+     * @param type Le type de notification
+     * @param lienUrl Lien optionnel vers une ressource
+     * @return La liste des notifications créées
+     */
+    public List<Notification> sendNotificationToRole(String message, String role, String type, String lienUrl) {
+        System.out.println("Envoi de notification à tous les utilisateurs avec le rôle: " + role);
+        
+        // Récupérer tous les utilisateurs ayant le rôle spécifié
+        List<User> usersWithRole = userRepository.findByRoles_Name(role);
+        
+        System.out.println("Utilisateurs avec le rôle " + role + ": " + usersWithRole.size());
+        for (User user : usersWithRole) {
+            System.out.println("- Utilisateur éligible: " + user.getEmail() + " (ID: " + user.getId() + ")");
+        }
+        
+        if (usersWithRole.isEmpty()) {
+            System.out.println("Aucun utilisateur trouvé avec le rôle: " + role);
+            return new ArrayList<>();
+        }
+        
+        String subject = "Notification: " + message;
+        
+        List<Notification> notifications = new ArrayList<>();
+        
+        // Envoyer l'email à chaque utilisateur concerné et créer une notification
+        for (User user : usersWithRole) {
+            try {
+                // Construire le contenu de l'email
+                StringBuilder emailContent = new StringBuilder();
+                emailContent.append("<html><body>");
+                emailContent.append("<h2>Notification du système</h2>");
+                emailContent.append("<p>").append(message).append("</p>");
+                
+                if (lienUrl != null && !lienUrl.isEmpty()) {
+                    emailContent.append("<p><a href='http://localhost:4200").append(lienUrl)
+                            .append("' style='background-color: #4CAF50; color: white; padding: 10px 15px; text-align: center; ")
+                            .append("text-decoration: none; display: inline-block; border-radius: 5px;'>")
+                            .append("Voir les détails</a></p>");
+                }
+                
+                emailContent.append("<p>Cordialement,<br>Le système de gestion des recouvrements BNM</p>");
+                emailContent.append("</body></html>");
+                
+                // Envoyer l'email
+                emailService.sendEmail(user.getEmail(), subject, emailContent.toString(), true);
+                System.out.println("Email de notification envoyé à " + user.getEmail());
+                
+                // Créer et sauvegarder une notification
+                Notification notification = new Notification();
+                notification.setUser(user);
+                notification.setMessage(message);
+                notification.setType(type != null ? type : "SYSTEME");
+                notification.setLu(false);
+                notification.setLienUrl(lienUrl);
+                
+                notifications.add(notificationRepository.save(notification));
+                
+            } catch (MessagingException e) {
+                System.err.println("Erreur lors de l'envoi d'email à " + user.getEmail() + ": " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+        
+        return notifications;
+    }
 }
