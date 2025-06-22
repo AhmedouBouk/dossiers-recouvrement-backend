@@ -61,12 +61,16 @@ import com.bnm.recouvrement.dao.DossierRecouvrementRepository;
 import com.bnm.recouvrement.entity.Compte;
 import com.bnm.recouvrement.entity.DossierRecouvrement;
 import com.bnm.recouvrement.repository.NotificationRepository;
+import com.bnm.recouvrement.repository.RejetRepository;
 
 @Service
 public class DossierRecouvrementService {
 
     @Autowired
     private DossierRecouvrementRepository dossierRepository;
+        @Autowired
+
+    private RejetRepository rejetRepository;
 
     @Autowired
     private CompteRepository compteRepository;
@@ -144,9 +148,22 @@ public class DossierRecouvrementService {
 
     @Transactional
     public DossierRecouvrement updateDossier(Long id, DossierRecouvrement dossier) {
-        if (!dossierRepository.existsById(id)) {
-            throw new IllegalArgumentException("Dossier non trouvé avec l'ID: " + id);
+        // Récupérer le dossier existant pour préserver les données non modifiées
+        DossierRecouvrement existingDossier = dossierRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Dossier non trouvé avec l'ID: " + id));
+        
+        // Préserver les commentaires existants si non fournis dans la mise à jour
+        if (dossier.getCommentaires() == null || dossier.getCommentaires().isEmpty()) {
+            dossier.setCommentaires(existingDossier.getCommentaires());
         }
+        
+        // Préserver d'autres champs importants si nécessaire
+        // Par exemple, si les garanties ne sont pas incluses dans la mise à jour
+        if (dossier.getGaranties() == null || dossier.getGaranties().isEmpty()) {
+            dossier.setGaranties(existingDossier.getGaranties());
+        }
+        
+        // Assigner l'ID et sauvegarder
         dossier.setId(id);
         DossierRecouvrement updatedDossier = dossierRepository.save(dossier);
         
@@ -181,6 +198,7 @@ public class DossierRecouvrementService {
             "Dossier #" + id
         );
         // Supprimer les notifications liées au dossier
+        rejetRepository.deleteByDossierId(id);
 notificationRepository.deleteByDossierId(id);
 
         
