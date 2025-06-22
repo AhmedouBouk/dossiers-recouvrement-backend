@@ -38,4 +38,6 @@ public interface RejetRepository extends JpaRepository<Rejet, Long> {
      * @return Liste des rejets concernant cet utilisateur
      */
     List<Rejet> findByUtilisateursNotifiesContainingOrderByDateRejetDesc(User user);
+    void deleteByDossierId(Long dossierId);
+
 }
