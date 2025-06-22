@@ -7,6 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import com.bnm.recouvrement.entity.DossierRecouvrement;
 import com.bnm.recouvrement.entity.Rejet;
+import com.bnm.recouvrement.entity.User;
 
 @Repository
 public interface RejetRepository extends JpaRepository<Rejet, Long> {
@@ -30,4 +31,11 @@ public interface RejetRepository extends JpaRepository<Rejet, Long> {
      * @return Liste des rejets concernant ce type d'utilisateur
      */
     List<Rejet> findByTypesUtilisateursContainingOrderByDateRejetDesc(String typeUtilisateur);
+    
+    /**
+     * Trouve tous les rejets où l'utilisateur notifié est dans la liste
+     * @param user L'utilisateur notifié
+     * @return Liste des rejets concernant cet utilisateur
+     */
+    List<Rejet> findByUtilisateursNotifiesContainingOrderByDateRejetDesc(User user);
 }

@@ -86,4 +86,22 @@ public class RejetController {
             return ResponseEntity.badRequest().build();
         }
     }
+    
+    /**
+     * Récupère tous les rejets où l'utilisateur connecté est notifié
+     * @return Liste des rejets pour l'utilisateur connecté
+     */
+    @GetMapping("/mes-rejets")
+    public ResponseEntity<List<Rejet>> getRejetsPourUtilisateurConnecte() {
+        try {
+            org.springframework.security.core.Authentication auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+            String email = auth.getName();
+            List<Rejet> rejets = rejetService.getRejetsPourUtilisateurConnecte(email);
+            return ResponseEntity.ok(rejets);
+        } catch (Exception e) {
+            System.err.println("Erreur lors de la récupération des rejets pour l'utilisateur connecté: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().build();
+        }
+    }
 }
