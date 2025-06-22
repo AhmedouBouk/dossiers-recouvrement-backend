@@ -106,6 +106,24 @@ public class AdminService {
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
+    
+    /**
+     * Récupère les utilisateurs par type
+     * @param userType Le type d'utilisateur
+     * @return Liste des utilisateurs du type spécifié
+     */
+    public List<User> getUsersByType(String userType) {
+        return userRepository.findByUserType(userType);
+    }
+    
+    /**
+     * Récupère les utilisateurs par types (plusieurs types)
+     * @param userTypes Liste des types d'utilisateurs
+     * @return Liste des utilisateurs des types spécifiés
+     */
+    public List<User> getUsersByTypes(List<String> userTypes) {
+        return userRepository.findByUserTypeIn(userTypes);
+    }
 
     public User getUserById(Integer id) {
         return userRepository.findById(id)

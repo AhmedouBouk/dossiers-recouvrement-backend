@@ -26,7 +26,7 @@ public class CompteController {
     private CompteService compteService;
 
     @PostMapping("/import-comptes")
-    @PreAuthorize("hasAuthority('IMPORT_COMPTE')")
+    @PreAuthorize("hasAuthority('CREATE_COMPTE')")
     public ResponseEntity<?> importComptes(@RequestParam("file") MultipartFile file) {
         try {
             if (file.isEmpty()) {

@@ -76,6 +76,15 @@ public class SecurityConfig {
     
                 // DASHBOARD - Read-only access to dashboard statistics
                 .requestMatchers("/dashboard/**").permitAll()
+
+                // USERS - Permettre l'accès aux endpoints utilisateurs pour le workflow de rejet
+                .requestMatchers("/users/**").permitAll()
+                .requestMatchers("/users/types").permitAll()
+                .requestMatchers("/users/type/**").permitAll()
+
+                // REJETS - Permettre l'accès aux endpoints de rejet pour le workflow multi-étapes
+                .requestMatchers("/api/rejets/**").permitAll()
+                .requestMatchers("/rejets/**").permitAll()
     
                 // Require authentication for all other requests
                 .anyRequest().authenticated()

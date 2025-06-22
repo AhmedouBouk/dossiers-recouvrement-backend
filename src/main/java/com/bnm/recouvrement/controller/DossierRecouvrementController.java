@@ -521,4 +521,35 @@ public ResponseEntity<DossierRecouvrement> desarchiverDossier(@PathVariable Long
             .build();
     }
 }
+
+/**
+ * Réinitialise l'état de validation d'un dossier après traitement d'un rejet
+ * @param id L'ID du dossier à réinitialiser
+ * @return Le dossier mis à jour
+ */
+@PostMapping("/{id}/reset-validation")
+public ResponseEntity<DossierRecouvrement> resetValidationState(@PathVariable Long id) {
+    try {
+        Optional<DossierRecouvrement> optionalDossier = dossierRecouvrementRepository.findById(id);
+        
+        if (!optionalDossier.isPresent()) {
+            return ResponseEntity.notFound().build();
+        }
+        
+        DossierRecouvrement dossier = optionalDossier.get();
+        // Réinitialiser l'état de validation du dossier à INITIALE
+        dossier.setEtatValidation(DossierRecouvrement.EtatValidation.INITIALE);
+        
+        // Sauvegarder les modifications
+        DossierRecouvrement updatedDossier = dossierRecouvrementRepository.save(dossier);
+        
+        return ResponseEntity.ok(updatedDossier);
+    } catch (Exception e) {
+        System.err.println("Erreur lors de la réinitialisation de l'état de validation: " + e.getMessage());
+        e.printStackTrace();
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+            .header("Error-Message", "Erreur lors de la réinitialisation de l'état de validation")
+            .build();
+    }
+}
 }
