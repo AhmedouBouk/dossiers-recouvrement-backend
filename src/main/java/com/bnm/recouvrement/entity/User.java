@@ -35,6 +35,10 @@ public class User implements UserDetails {
     @Column(name = "user_type")
     private String userType;  // Nouveau champ pour stocker le type d'utilisateur
     
+    @Column(name = "first_login", nullable = false)
+    @Builder.Default
+    private boolean firstLogin = true;  // Par défaut, c'est le premier login
+    
     @ManyToOne
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;

@@ -7,11 +7,7 @@ import lombok.NoArgsConstructor;
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
-public class AuthResponse {
-    private String token;
-    private boolean firstLogin;
-    
-    public AuthResponse(String token) {
-        this.token = token;
-    }
+public class PasswordChangeRequest {
+    private String newPassword;
+    private String confirmPassword;
 }
