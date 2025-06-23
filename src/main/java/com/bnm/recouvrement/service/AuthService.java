@@ -6,6 +6,7 @@ import com.bnm.recouvrement.dao.RoleRepository;
 import com.bnm.recouvrement.dao.UserRepository;
 import com.bnm.recouvrement.dto.AuthRequest;
 import com.bnm.recouvrement.dto.AuthResponse;
+import com.bnm.recouvrement.dto.PasswordChangeRequest;
 import com.bnm.recouvrement.dto.UserDto;
 import com.bnm.recouvrement.entity.Agence;
 import com.bnm.recouvrement.entity.Role;
@@ -90,6 +91,40 @@ public class AuthService {
             details
         );
 
-        return new AuthResponse(jwtService.generateToken(user));
+        AuthResponse response = new AuthResponse();
+        response.setToken(jwtService.generateToken(user));
+        response.setFirstLogin(user.isFirstLogin());
+        
+        return response;
+    }
+    
+    public void changePassword(String email, PasswordChangeRequest request) {
+        // Validate password match
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new BadCredentialsException("Les mots de passe ne correspondent pas");
+        }
+        
+        // Find user
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Utilisateur non trouvé"));
+        
+        // Update password
+        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        
+        // Update firstLogin flag
+        user.setFirstLogin(false);
+        
+        // Save user
+        userRepository.save(user);
+        
+        // Log password change event
+        historyService.createEvent(
+            user.getEmail(),
+            "PASSWORD_CHANGE",
+            "USER",
+            user.getId() != null ? user.getId().toString() : null,
+            user.getName(),
+            "Mot de passe modifié avec succès"
+        );
     }
 }
