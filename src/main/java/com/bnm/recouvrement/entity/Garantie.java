@@ -3,6 +3,7 @@ package com.bnm.recouvrement.entity;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import java.time.LocalDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "garanties")
@@ -14,6 +15,12 @@ public class Garantie {
 
     @Column(nullable = false)
     private String titre;
+    
+    @Column(name = "type_garantie")
+    private String typeGarantie;
+    
+    @Column(name = "valeur_garantie")
+    private BigDecimal valeurGarantie;
 
     @Column(nullable = false)
     private String filePath;
@@ -29,8 +36,10 @@ public class Garantie {
     // Constructors
     public Garantie() {}
 
-    public Garantie(String titre, String filePath, LocalDateTime uploadDate, DossierRecouvrement dossier) {
+    public Garantie(String titre, String typeGarantie, BigDecimal valeurGarantie, String filePath, LocalDateTime uploadDate, DossierRecouvrement dossier) {
         this.titre = titre;
+        this.typeGarantie = typeGarantie;
+        this.valeurGarantie = valeurGarantie;
         this.filePath = filePath;
         this.uploadDate = uploadDate;
         this.dossier = dossier;
@@ -51,6 +60,22 @@ public class Garantie {
 
     public void setTitre(String titre) {
         this.titre = titre;
+    }
+    
+    public String getTypeGarantie() {
+        return typeGarantie;
+    }
+
+    public void setTypeGarantie(String typeGarantie) {
+        this.typeGarantie = typeGarantie;
+    }
+
+    public BigDecimal getValeurGarantie() {
+        return valeurGarantie;
+    }
+
+    public void setValeurGarantie(BigDecimal valeurGarantie) {
+        this.valeurGarantie = valeurGarantie;
     }
 
     public String getFilePath() {
