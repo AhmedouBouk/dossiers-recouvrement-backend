@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,7 +34,7 @@ public class GarantieService {
     private final Path rootLocation = Paths.get("uploads/garanties"); // Dossier de stockage des fichiers de garantie
 
     // Uploader un fichier de garantie
-    public DossierRecouvrement uploadGarantie(Long dossierId, MultipartFile file, String titre) throws IOException {
+    public DossierRecouvrement uploadGarantie(Long dossierId, MultipartFile file, String titre, String typeGarantie, BigDecimal valeurGarantie) throws IOException {
         DossierRecouvrement dossier = dossierRepository.findById(dossierId)
                 .orElseThrow(() -> new RuntimeException("Dossier non trouvé"));
     
@@ -55,6 +56,8 @@ public class GarantieService {
         // Créer une nouvelle garantie
         Garantie garantie = new Garantie();
         garantie.setTitre(titre);
+        garantie.setTypeGarantie(typeGarantie);
+        garantie.setValeurGarantie(valeurGarantie);
         garantie.setFilePath(fileUrl);
         garantie.setUploadDate(LocalDateTime.now());
         garantie.setDossier(dossier);
@@ -78,13 +81,44 @@ public class GarantieService {
     
         return updatedDossier;
     }
-    public Garantie updateGarantie(Long garantieId, String nouveauTitre) {
+    public Garantie updateGarantie(Long garantieId, String nouveauTitre, String nouveauType, BigDecimal nouvelleValeur) {
         return garantieRepository.findById(garantieId)
             .map(garantie -> {
+                // Préserver la date de téléchargement originale
+                LocalDateTime dateOriginale = garantie.getUploadDate();
+                
                 garantie.setTitre(nouveauTitre);
+                if (nouveauType != null) {
+                    garantie.setTypeGarantie(nouveauType);
+                }
+                if (nouvelleValeur != null) {
+                    garantie.setValeurGarantie(nouvelleValeur);
+                }
+                
+                // S'assurer que la date reste inchangée
+                garantie.setUploadDate(dateOriginale);
+                
+                // Enregistrer l'événement dans l'historique
+                Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+                String username = auth.getName();
+                
+                historyService.createEvent(
+                    username,
+                    "update",
+                    "garantie",
+                    garantie.getDossier().getId().toString(),
+                    "Dossier #" + garantie.getDossier().getId(),
+                    "Modification de la garantie '" + nouveauTitre + "'"
+                );
+                
                 return garantieRepository.save(garantie);
             })
             .orElseThrow(() -> new RuntimeException("Garantie non trouvée avec l'ID : " + garantieId));
+    }
+    
+    // Mise à jour uniquement du titre pour compatibilité avec l'existant
+    public Garantie updateGarantie(Long garantieId, String nouveauTitre) {
+        return updateGarantie(garantieId, nouveauTitre, null, null);
     }
     // Récupérer toutes les garanties d'un dossier
     public List<Garantie> getGarantiesByDossierId(Long dossierId) {

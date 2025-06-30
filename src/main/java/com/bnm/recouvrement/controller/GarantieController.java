@@ -17,8 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.net.MalformedURLException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
@@ -42,8 +42,10 @@ public class GarantieController {
     public ResponseEntity<DossierRecouvrement> uploadGarantie(
             @PathVariable Long dossierId,
             @RequestParam("file") MultipartFile file,
-            @RequestParam("titre") String titre) throws IOException {
-        DossierRecouvrement dossier = garantieService.uploadGarantie(dossierId, file, titre);
+            @RequestParam("titre") String titre,
+            @RequestParam(value = "typeGarantie", required = false) String typeGarantie,
+            @RequestParam(value = "valeurGarantie", required = false) BigDecimal valeurGarantie) throws IOException {
+        DossierRecouvrement dossier = garantieService.uploadGarantie(dossierId, file, titre, typeGarantie, valeurGarantie);
         return ResponseEntity.ok(dossier);
     }
     
@@ -67,8 +69,10 @@ public class GarantieController {
     @PutMapping("/garantie/{garantieId}")
     public ResponseEntity<Garantie> updateGarantie(
             @PathVariable Long garantieId,
-            @RequestParam("titre") String nouveauTitre) {
-        Garantie updatedGarantie = garantieService.updateGarantie(garantieId, nouveauTitre);
+            @RequestParam("titre") String nouveauTitre,
+            @RequestParam(value = "typeGarantie", required = false) String nouveauType,
+            @RequestParam(value = "valeurGarantie", required = false) BigDecimal nouvelleValeur) {
+        Garantie updatedGarantie = garantieService.updateGarantie(garantieId, nouveauTitre, nouveauType, nouvelleValeur);
         return ResponseEntity.ok(updatedGarantie);
     }
     // Supprimer un fichier de garantie
